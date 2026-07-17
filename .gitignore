@@ -1,21 +1,49 @@
+# =========================
 # Flutter
+# =========================
 .dart_tool/
 .packages
+.pub/
 build/
 .flutter-plugins
 .flutter-plugins-dependencies
 
-# Secrets
+# =========================
+# Node.js Backend
+# =========================
+server/node_modules/
+
+# =========================
+# Environment Variables
+# =========================
 .env
 server/.env
 
-# IDE
+# =========================
+# IDEs
+# =========================
+.vscode/
 .idea/
 *.iml
 
-# OS
+# =========================
+# Logs
+# =========================
+*.log
+
+# =========================
+# OS Files
+# =========================
 .DS_Store
 Thumbs.db
 
-# Node
-server/node_modules/
+# =========================
+# Coverage
+# =========================
+coverage/
+
+# =========================
+# Temporary Files
+# =========================
+*.tmp
+*.bak
