@@ -1,0 +1,22 @@
+{
+  "name": "cpool-api",
+  "version": "1.0.0",
+  "description": "CPool MVP API — Express + PostgreSQL",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "db:migrate": "node src/db/migrate.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "helmet": "^8.0.0",
+    "morgan": "^1.10.0",
+    "multer": "^2.2.0",
+    "pg": "^8.13.3",
+    "razorpay": "^2.9.6"
+  }
+}
