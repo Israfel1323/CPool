@@ -5,9 +5,9 @@ import '../../core/providers/auth_provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../widgets/theme_toggle.dart';
-import '../auth/login_screen.dart';
 import '../payments/payments_screen.dart';
 import '../shell/main_shell.dart';
+import 'complete_profile_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -22,51 +22,100 @@ class ProfileScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
         children: [
-          Center(
-            child: Column(
-              children: [
-                CircleAvatar(
-                  radius: 44,
-                  backgroundColor: theme.accentMuted,
-                  child: Icon(Icons.person_rounded, size: 44, color: theme.accent),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  auth.isSignedIn ? auth.displayName : 'Sign in to continue',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  auth.isSignedIn
-                      ? (auth.user?.email ?? '')
-                      : 'Email or Google — no Twilio OTP cost',
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-                if (auth.syncError != null) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    'API sync: ${auth.syncError}',
-                    style: Theme.of(context).textTheme.bodySmall,
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-                const SizedBox(height: 16),
-                if (auth.isSignedIn)
-                  OutlinedButton(
-                    onPressed: () => auth.signOut(),
-                    child: const Text('Sign out'),
-                  )
-                else
-                  FilledButton(
-                    onPressed: () => Navigator.of(context).push<bool>(
-                      MaterialPageRoute<bool>(builder: (_) => const LoginScreen()),
+Center(
+  child: Container(
+    constraints: const BoxConstraints(maxWidth: 420),
+    padding: const EdgeInsets.all(24),
+    decoration: BoxDecoration(
+      color: theme.card,
+      borderRadius: BorderRadius.circular(24),
+      border: Border.all(color: theme.border),
+    ),
+    child: Column(
+      children: [
+        CircleAvatar(
+  radius: 46,
+  backgroundColor: theme.accentMuted,
+  backgroundImage:
+      auth.profile?['avatar_url'] != null &&
+              (auth.profile!['avatar_url'] as String).isNotEmpty
+          ? NetworkImage(auth.profile!['avatar_url'])
+          : null,
+  child:
+      auth.profile?['avatar_url'] == null ||
+              (auth.profile!['avatar_url'] as String).isEmpty
+          ? Icon(
+              Icons.person_rounded,
+              size: 48,
+              color: theme.accent,
+            )
+          : null,
+),
+
+        const SizedBox(height: 18),
+
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Flexible(
+              child: Text(
+                auth.profile?['full_name'] ?? auth.displayName,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
                     ),
-                    child: const Text('Sign in'),
-                  ),
-              ],
+              ),
             ),
+
+            const SizedBox(width: 8),
+
+            Container(
+              width: 10,
+              height: 10,
+              decoration: const BoxDecoration(
+                color: Colors.green,
+                shape: BoxShape.circle,
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 8),
+
+        Text(
+          "MGIT • ${auth.profile?['branch'] ?? ''}",
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+
+        const SizedBox(height: 22),
+
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton.icon(
+            onPressed: () async {
+  final updated = await Navigator.push<bool>(
+    context,
+    MaterialPageRoute(
+      builder: (_) => CompleteProfileScreen(
+        isEditing: true,
+        profile: auth.profile,
+      ),
+    ),
+  );
+
+  if (updated == true && context.mounted) {
+    await auth.refreshProfile();
+  }
+},
+            icon: const Icon(Icons.edit_outlined),
+            label: const Text("Edit Profile"),
           ),
-          const SizedBox(height: 28),
+        ),
+      ],
+    ),
+  ),
+),
+          const SizedBox(height: 36),
           _SectionHeader(title: 'Appearance'),
           const SizedBox(height: 8),
           Container(
@@ -103,7 +152,7 @@ class ProfileScreen extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 32),
           _SectionHeader(title: 'Verification'),
           const SizedBox(height: 8),
           _ProfileTile(
@@ -128,7 +177,7 @@ class ProfileScreen extends StatelessWidget {
                 ? 'Verified'
                 : 'License & vehicle details',
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 32),
           _SectionHeader(title: 'Account'),
           const SizedBox(height: 8),
           _ProfileTile(
@@ -191,19 +240,34 @@ class _ProfileTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(bottom: 14),
       child: ListTile(
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(18),
           side: BorderSide(color: theme.border),
         ),
         tileColor: theme.card,
-        leading: Icon(icon, color: theme.accent),
+        leading: Container(
+  width: 44,
+  height: 44,
+  decoration: BoxDecoration(
+    color: theme.accentMuted,
+    borderRadius: BorderRadius.circular(12),
+  ),
+  child: Icon(
+    icon,
+    color: theme.accent,
+    size: 22,
+  ),
+),
         title: Text(title, style: Theme.of(context).textTheme.labelLarge),
         subtitle: subtitle != null
             ? Text(subtitle!, style: Theme.of(context).textTheme.bodyMedium)
             : null,
-        trailing: Icon(Icons.chevron_right_rounded, color: theme.textSecondary),
+        trailing: const Icon(
+  Icons.arrow_forward_ios_rounded,
+  size: 16,
+),
         onTap: onTap ?? () {},
       ),
     );

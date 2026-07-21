@@ -75,6 +75,7 @@ router.patch('/me', requireAuth, async (req, res) => {
   branch,
   roll_number,
   admission_year,
+  avatar_url,
 } = req.body;
   const result = await query(
     `UPDATE profiles
@@ -90,6 +91,8 @@ roll_number = COALESCE($5, roll_number),
 
 admission_year = COALESCE($6, admission_year),
 
+avatar_url = COALESCE($7, avatar_url),
+
 profile_completed = TRUE,
 
 updated_at = NOW()
@@ -104,7 +107,8 @@ RETURNING *`,
   branch,
   roll_number,
   admission_year,
-],
+  avatar_url,
+]
   );
   res.json({ profile: result.rows[0] });
 });

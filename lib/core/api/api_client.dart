@@ -27,7 +27,6 @@ final session =
 print('Session exists: ${session != null}');
 print('Access Token: ${session?.accessToken.substring(0, 20)}...');
           if (AppConfig.hasSupabase) {
-            final session = supabase.Supabase.instance.client.auth.currentSession;
             if (session != null) {
               options.headers['Authorization'] =
                   'Bearer ${session.accessToken}';
@@ -48,9 +47,14 @@ print('Access Token: ${session?.accessToken.substring(0, 20)}...');
   }
 
   Future<Map<String, dynamic>> getProfile() async {
-    final res = await _dio.get<Map<String, dynamic>>('/users/me');
-    return res.data!;
-  }
+  final res = await _dio.get<Map<String, dynamic>>('/users/me');
+
+  print("=========== PROFILE RESPONSE ===========");
+  print(res.data);
+  print("========================================");
+
+  return res.data!;
+}
 
   Future<List<dynamic>> searchGeocode(String query) async {
     final res = await _dio.get<Map<String, dynamic>>(
@@ -234,22 +238,67 @@ Future<Map<String, dynamic>> getVerificationStatus() async {
 
   return res.data!;
 }
+Future<String> uploadProfilePhoto(XFile image) async {
+  print("========== UPLOAD STARTED ==========");
+
+  final client = supabase.Supabase.instance.client;
+
+  final user = client.auth.currentUser;
+
+  if (user == null) {
+    throw Exception('User not logged in');
+  }
+
+  print("User ID: ${user.id}");
+
+  final bytes = await image.readAsBytes();
+
+  print("Image Size: ${bytes.length}");
+
+  final path =
+    '${user.id}/${DateTime.now().millisecondsSinceEpoch}.jpg';
+
+  print("Uploading to: $path");
+
+  await client.storage
+      .from('avatars')
+      .uploadBinary(
+        path,
+        bytes,
+        fileOptions: const supabase.FileOptions(
+          upsert: false,
+          contentType: 'image/jpeg',
+        ),
+      );
+
+  print("Upload Complete");
+
+  final publicUrl =
+      client.storage.from('avatars').getPublicUrl(path);
+
+  print("Public URL:");
+  print(publicUrl);
+
+  return publicUrl;
+}
 Future<Map<String, dynamic>> updateProfile({
   required String fullName,
   required String phoneNumber,
   required String branch,
   required String rollNumber,
   required int admissionYear,
+  String? avatarUrl,
 }) async {
   final res = await _dio.patch<Map<String, dynamic>>(
     '/users/me',
     data: {
-      'full_name': fullName,
-      'phone_number': phoneNumber,
-      'branch': branch,
-      'roll_number': rollNumber,
-      'admission_year': admissionYear,
-    },
+  'full_name': fullName,
+  'phone_number': phoneNumber,
+  'branch': branch,
+  'roll_number': rollNumber,
+  'admission_year': admissionYear,
+  if (avatarUrl != null) 'avatar_url': avatarUrl,
+},
   );
 
   return res.data!;

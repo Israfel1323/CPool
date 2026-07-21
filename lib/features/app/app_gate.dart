@@ -2,9 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../core/api/api_client.dart';
 import '../auth/login_screen.dart';
 import '../profile/complete_profile_screen.dart';
 import '../shell/main_shell.dart';
