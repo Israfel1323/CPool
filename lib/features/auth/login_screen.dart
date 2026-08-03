@@ -59,7 +59,6 @@ class _LoginScreenState extends State<LoginScreen> {
     });
     try {
       await context.read<AuthProvider>().signInWithGoogle();
-      if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
   setState(() {
     _error = 'Google sign in failed. Please try again.';

@@ -29,7 +29,7 @@ abstract final class AppTheme {
         backgroundColor: AppColors.darkBg,
         foregroundColor: AppColors.darkText,
         systemOverlayStyle: SystemUiOverlayStyle.light,
-        titleTextStyle: GoogleFonts.outfit(
+        titleTextStyle: GoogleFonts.inter(
           fontSize: 18,
           fontWeight: FontWeight.w600,
           color: AppColors.darkText,
@@ -48,7 +48,7 @@ abstract final class AppTheme {
         indicatorColor: AppColors.violet600.withValues(alpha: 0.35),
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           final selected = states.contains(WidgetState.selected);
-          return GoogleFonts.outfit(
+          return GoogleFonts.inter(
             fontSize: 11,
             fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
             color: selected ? AppColors.violet400 : AppColors.darkGreyMuted,
@@ -83,8 +83,8 @@ abstract final class AppTheme {
           borderRadius: BorderRadius.circular(14),
           borderSide: const BorderSide(color: AppColors.violet500, width: 1.5),
         ),
-        hintStyle: GoogleFonts.outfit(color: AppColors.darkGreyMuted),
-        labelStyle: GoogleFonts.outfit(color: AppColors.darkGreyMuted),
+        hintStyle: GoogleFonts.inter(color: AppColors.darkGreyMuted),
+        labelStyle: GoogleFonts.inter(color: AppColors.darkGreyMuted),
       ),
       textTheme: _textTheme(isDark: true),
       extensions: const [CPoolThemeExtension(isDark: true)],
@@ -115,7 +115,7 @@ abstract final class AppTheme {
         backgroundColor: AppColors.lightBg,
         foregroundColor: AppColors.lightText,
         systemOverlayStyle: SystemUiOverlayStyle.dark,
-        titleTextStyle: GoogleFonts.outfit(
+        titleTextStyle: GoogleFonts.inter(
           fontSize: 18,
           fontWeight: FontWeight.w600,
           color: AppColors.lightText,
@@ -134,7 +134,7 @@ abstract final class AppTheme {
         indicatorColor: AppColors.violet100,
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           final selected = states.contains(WidgetState.selected);
-          return GoogleFonts.outfit(
+          return GoogleFonts.inter(
             fontSize: 11,
             fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
             color: selected ? AppColors.violet700 : AppColors.lightGreyMuted,
@@ -169,8 +169,8 @@ abstract final class AppTheme {
           borderRadius: BorderRadius.circular(14),
           borderSide: const BorderSide(color: AppColors.violet600, width: 1.5),
         ),
-        hintStyle: GoogleFonts.outfit(color: AppColors.lightGreyMuted),
-        labelStyle: GoogleFonts.outfit(color: AppColors.lightGreyMuted),
+        hintStyle: GoogleFonts.inter(color: AppColors.lightGreyMuted),
+        labelStyle: GoogleFonts.inter(color: AppColors.lightGreyMuted),
       ),
       textTheme: _textTheme(isDark: false),
       extensions: const [CPoolThemeExtension(isDark: false)],
@@ -183,37 +183,42 @@ abstract final class AppTheme {
         isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
 
     return TextTheme(
-      displayLarge: GoogleFonts.outfit(
-        fontSize: 40,
-        fontWeight: FontWeight.w700,
-        color: primary,
-        letterSpacing: -1,
-      ),
-      headlineMedium: GoogleFonts.outfit(
-        fontSize: 24,
-        fontWeight: FontWeight.w600,
-        color: primary,
-      ),
-      titleLarge: GoogleFonts.outfit(
-        fontSize: 18,
-        fontWeight: FontWeight.w600,
-        color: primary,
-      ),
-      bodyLarge: GoogleFonts.outfit(
-        fontSize: 16,
-        fontWeight: FontWeight.w400,
-        color: primary,
-      ),
-      bodyMedium: GoogleFonts.outfit(
-        fontSize: 14,
-        fontWeight: FontWeight.w400,
-        color: secondary,
-      ),
-      labelLarge: GoogleFonts.outfit(
-        fontSize: 14,
-        fontWeight: FontWeight.w600,
-        color: primary,
-      ),
+      displayLarge: GoogleFonts.spaceGrotesk(
+  fontSize: 40,
+  fontWeight: FontWeight.w700,
+  color: primary,
+  letterSpacing: -1,
+),
+
+headlineMedium: GoogleFonts.spaceGrotesk(
+  fontSize: 24,
+  fontWeight: FontWeight.w700,
+  color: primary,
+),
+
+titleLarge: GoogleFonts.spaceGrotesk(
+  fontSize: 18,
+  fontWeight: FontWeight.w600,
+  color: primary,
+),
+
+bodyLarge: GoogleFonts.inter(
+  fontSize: 16,
+  fontWeight: FontWeight.w400,
+  color: primary,
+),
+
+bodyMedium: GoogleFonts.inter(
+  fontSize: 14,
+  fontWeight: FontWeight.w400,
+  color: secondary,
+),
+
+labelLarge: GoogleFonts.inter(
+  fontSize: 14,
+  fontWeight: FontWeight.w600,
+  color: primary,
+),
     );
   }
 }

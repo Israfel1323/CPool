@@ -11,77 +11,86 @@ router.get('/', optionalAuth, async (req, res) => {
     SELECT c.*, p.display_name AS driver_name, p.driver_verified
     FROM commutes c
     JOIN profiles p ON p.id = c.driver_id
-    WHERE c.status = 'open' AND c.departure_at > NOW()
-  `;
+    WHERE c.status = 'open' AND c.departure_at > NOW() AND c.seats_available > 0`;
   const params = [];
+
+  if (req.user) {
+    params.push(req.user.id);
+    sql += ` AND c.driver_id <> $${params.length}`;
+  }
+  if (req.user) {
+    params.push(req.user.id);
+    sql += ` AND c.driver_id <> $${params.length}`;
+  }
 
   if (pool_type) {
     params.push(pool_type);
     sql += ` AND c.pool_type = $${params.length}`;
   }
-
   if (women_only === 'true') {
     sql += ` AND c.women_only = TRUE`;
+  } else {
+    sql += ` AND c.women_only = FALSE`;
   }
   if (
-  from_lat &&
-  from_lng &&
-  to_lat &&
-  to_lng
-) {
-  params.push(Number(from_lat));
-  params.push(Number(from_lng));
-  params.push(Number(to_lat));
-  params.push(Number(to_lng));
+    from_lat &&
+    from_lng &&
+    to_lat &&
+    to_lng
+  ) {
+    params.push(Number(from_lat));
+    params.push(Number(from_lng));
+    params.push(Number(to_lat));
+    params.push(Number(to_lng));
 
-  const fromLatIndex = params.length - 3;
-  const fromLngIndex = params.length - 2;
-  const toLatIndex = params.length - 1;
-  const toLngIndex = params.length;
+    const fromLatIndex = params.length - 3;
+    const fromLngIndex = params.length - 2;
+    const toLatIndex = params.length - 1;
+    const toLngIndex = params.length;
 
-  sql += `
+    sql += `
     AND ABS(c.from_lat - $${fromLatIndex}) < 0.05
     AND ABS(c.from_lng - $${fromLngIndex}) < 0.05
     AND ABS(c.to_lat - $${toLatIndex}) < 0.05
     AND ABS(c.to_lng - $${toLngIndex}) < 0.05
   `;
-}
+  }
 
   sql += ' ORDER BY c.departure_at ASC LIMIT 50';
 
-const result = await query(sql, params);
+  const result = await query(sql, params);
 
-let bookedRideIds = [];
+  let bookedRideIds = [];
 
-if (req.user) {
-  const bookings = await query(
-    `SELECT commute_id
+  if (req.user) {
+    const bookings = await query(
+      `SELECT commute_id
      FROM ride_bookings
      WHERE passenger_id = $1`,
-    [req.user.id],
-  );
+      [req.user.id],
+    );
 
-  bookedRideIds = bookings.rows.map(
-    (b) => b.commute_id,
-  );
-}
+    bookedRideIds = bookings.rows.map(
+      (b) => b.commute_id,
+    );
+  }
 
-const commutes = result.rows.map((ride) => ({
-  ...ride,
-  already_booked: bookedRideIds.includes(
-    ride.id,
-  ),
-}));
+  const commutes = result.rows.map((ride) => ({
+    ...ride,
+    already_booked: bookedRideIds.includes(
+      ride.id,
+    ),
+  }));
 
-res.json({
-  commutes,
-  search: {
-    from_lat,
-    from_lng,
-    to_lat,
-    to_lng,
-  },
-});
+  res.json({
+    commutes,
+    search: {
+      from_lat,
+      from_lng,
+      to_lat,
+      to_lng,
+    },
+  });
 });
 
 router.post('/', requireAuth, async (req, res) => {
@@ -196,8 +205,8 @@ router.get('/booked', requireAuth, async (req, res) => {
   res.json({
     commutes: result.rows,
   });
-  });
-  router.get('/history', requireAuth, async (req, res) => {
+});
+router.get('/history', requireAuth, async (req, res) => {
   const result = await query(
     `
     SELECT DISTINCT
@@ -276,7 +285,7 @@ router.patch('/:id/cancel', requireAuth, async (req, res) => {
     commute: result.rows[0],
   });
 });
-  router.get('/:id/passengers', requireAuth, async (req, res) => {
+router.get('/:id/passengers', requireAuth, async (req, res) => {
   const result = await query(
     `SELECT
         p.id,
@@ -316,7 +325,7 @@ router.get('/:id', async (req, res) => {
 });
 
 router.post('/:id/book', requireAuth, async (req, res) => {
-  const { seats = 1 } = req.body;
+  const seats = 1;
   const commuteId = req.params.id;
 
   const commuteRes = await query(
@@ -344,19 +353,19 @@ router.post('/:id/book', requireAuth, async (req, res) => {
       error: 'Not enough seats',
     });
   }
-const existingBooking = await query(
-  `SELECT id
+  const existingBooking = await query(
+    `SELECT id
    FROM ride_bookings
    WHERE commute_id = $1
    AND passenger_id = $2`,
-  [commuteId, req.user.id],
-);
+    [commuteId, req.user.id],
+  );
 
-if (existingBooking.rows.length > 0) {
-  return res.status(400).json({
-    error: 'You have already booked this ride',
-  });
-}
+  if (existingBooking.rows.length > 0) {
+    return res.status(400).json({
+      error: 'You have already booked this ride',
+    });
+  }
   const amountPaise =
     commute.cost_per_seat_paise * seats;
 
@@ -401,7 +410,7 @@ if (existingBooking.rows.length > 0) {
     amount_paise: amountPaise,
   });
 });
- router.delete('/:id/book', requireAuth, async (req, res) => {
+router.delete('/:id/book', requireAuth, async (req, res) => {
   const commuteId = req.params.id;
 
   const booking = await query(

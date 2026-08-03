@@ -36,6 +36,13 @@ abstract final class AppColors {
   static const Color lightText = Color(0xFF1A1A24);
   static const Color lightTextSecondary = Color(0xFF4B5563);
 
+  // Home Action Cards
+  static const Color ridePurple = Color(0xFF6D28D9);
+  static const Color ridePurpleDark = Color(0xFF5B21B6);
+
+  static const Color offerTeal = Color(0xFF0F766E);
+  static const Color offerTealDark = Color(0xFF115E59);
+
   static const Color error = Color(0xFFEF4444);
   static const Color success = Color(0xFF22C55E);
   static const Color warning = Color(0xFFF59E0B);

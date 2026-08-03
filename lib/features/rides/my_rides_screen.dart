@@ -4,14 +4,14 @@ import '../../core/api/api_client.dart';
 import '../shell/main_shell.dart';
 import 'ride_details_screen.dart';
 
-class RidesScreen extends StatefulWidget {
-  const RidesScreen({super.key});
+class MyRidesScreen extends StatefulWidget {
+  const MyRidesScreen({super.key});
 
   @override
-  State<RidesScreen> createState() => _RidesScreenState();
+  State<MyRidesScreen> createState() => _MyRidesScreenState();
 }
 
-class _RidesScreenState extends State<RidesScreen> {
+class _MyRidesScreenState extends State<MyRidesScreen> {
   final ApiClient _api = ApiClient();
 late Future<List<dynamic>> _createdRidesFuture;
 late Future<List<dynamic>> _bookedRidesFuture;

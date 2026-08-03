@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
-
 import '../../core/theme/app_theme.dart';
 import '../../widgets/theme_toggle.dart';
 import '../chat/chat_screen.dart';
 import '../home/home_screen.dart';
 import '../profile/profile_screen.dart';
-import '../rides/rides_screen.dart';
-import '../commutes/create_commute_screen.dart';
+import '../commutes/offer_ride_screen.dart';
+import '../rides/my_rides_screen.dart';
 import '../search/search_screen.dart';
 
 class MainShell extends StatefulWidget {
@@ -30,7 +29,7 @@ class _MainShellState extends State<MainShell> {
   final _screens = const [
     HomeScreen(),
     SearchScreen(),
-    RidesScreen(),
+    MyRidesScreen(),
     ChatScreen(),
     ProfileScreen(),
   ];
@@ -94,20 +93,6 @@ class _MainShellState extends State<MainShell> {
           ),
         ),
       ),
-      floatingActionButton: _currentIndex == 0
-          ? FloatingActionButton.extended(
-              onPressed: () {
-                _onTabSelected(1);
-                Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const CreateCommuteScreen(),
-                  ),
-                );
-              },
-              icon: const Icon(Icons.add_rounded),
-              label: const Text('Offer ride'),
-            )
-          : null,
     );
   }
 }
