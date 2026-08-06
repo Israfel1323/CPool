@@ -11,6 +11,7 @@ import geocodeRouter from './routes/geocode.js';
 import paymentsRouter from './routes/payments.js';
 import chatRouter from './routes/chat.js';
 import driverDetailsRouter from './routes/driver-details.js';
+import operationsRouter from './routes/operations/index.js';
 
 const app = express();
 const port = Number(process.env.PORT) || 3000;
@@ -51,6 +52,8 @@ app.use('/payments', paymentsRouter);
 app.use('/chat', chatRouter);
 app.use('/verification', verificationRouter);
 app.use('/driver-details', driverDetailsRouter);
+app.use('/operations', operationsRouter);
+
 
 app.use((err, _req, res, _next) => {
   console.error(err);
