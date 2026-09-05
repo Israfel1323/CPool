@@ -143,12 +143,13 @@ class _OfferRideScreenState extends State<OfferRideScreen> {
         'cost_per_seat_paise': _costRupees * 100,
         'departure_at': _departure.toUtc().toIso8601String(),
       });
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Ride created')));
-        Navigator.of(context).pop();
-      }
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ride created successfully')),
+      );
+
+      Navigator.of(context).pop(true);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(

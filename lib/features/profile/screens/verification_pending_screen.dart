@@ -1,15 +1,28 @@
 import 'package:flutter/material.dart';
 
 class VerificationPendingScreen extends StatelessWidget {
-  const VerificationPendingScreen({super.key});
+  const VerificationPendingScreen({
+    super.key,
+    this.verificationType = 'driver',
+  });
+
+  final String verificationType;
+
+  bool get isDriver => verificationType.toLowerCase() == 'driver';
+
+  String get pageTitle =>
+      isDriver ? 'Driver Verification' : 'Identity Verification';
+
+  String get documentText =>
+      isDriver ? 'your driving license' : 'your College ID';
+  String get featureText => isDriver
+      ? 'Once your driver verification is approved, you will be able to offer rides to other CPool users.'
+      : 'Once your student verification is approved, you will be able to find and join rides on CPool.';
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Driver Verification"),
-        automaticallyImplyLeading: false,
-      ),
+      appBar: AppBar(title: Text(pageTitle), automaticallyImplyLeading: false),
       body: SafeArea(
         child: Center(
           child: Padding(
@@ -18,11 +31,11 @@ class VerificationPendingScreen extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const CircleAvatar(
-                  radius: 50,
+                  radius: 60,
                   backgroundColor: Colors.orange,
                   child: Icon(
-                    Icons.hourglass_top,
-                    size: 55,
+                    Icons.hourglass_top_rounded,
+                    size: 64,
                     color: Colors.white,
                   ),
                 ),
@@ -30,22 +43,20 @@ class VerificationPendingScreen extends StatelessWidget {
                 const SizedBox(height: 30),
 
                 const Text(
-                  "Application Submitted",
-                  style: TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  'Application Submitted',
+                  style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
                   textAlign: TextAlign.center,
                 ),
 
                 const SizedBox(height: 20),
 
-                const Text(
-                  "Your driver verification request has been submitted successfully.\n\n"
-                  "Our team is now reviewing your documents.\n\n"
-                  "Verification usually takes 24–48 hours.",
+                Text(
+                  'Your verification request has been submitted successfully.\n\n'
+                  'Our team is now reviewing $documentText.\n\n'
+                  'Verification usually takes 24–48 hours.\n\n'
+                  '$featureText',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 16),
+                  style: const TextStyle(fontSize: 16, height: 1.5),
                 ),
 
                 const SizedBox(height: 35),
@@ -62,13 +73,10 @@ class VerificationPendingScreen extends StatelessWidget {
                   child: const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
-                        Icons.pending,
-                        color: Colors.orange,
-                      ),
+                      Icon(Icons.pending_rounded, color: Colors.orange),
                       SizedBox(width: 8),
                       Text(
-                        "Pending Verification",
+                        'Pending Verification',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           color: Colors.orange,
@@ -88,7 +96,7 @@ class VerificationPendingScreen extends StatelessWidget {
                     },
                     child: const Padding(
                       padding: EdgeInsets.symmetric(vertical: 14),
-                      child: Text("Return Home"),
+                      child: Text('Return Home'),
                     ),
                   ),
                 ),

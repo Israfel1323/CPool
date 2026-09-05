@@ -25,7 +25,7 @@ class ApiClient {
           final session = supabase.Supabase.instance.client.auth.currentSession;
 
           print('Session exists: ${session != null}');
-          print('Access Token: ${session?.accessToken.substring(0, 20)}...');
+          print('FULL ACCESS TOKEN: ${session?.accessToken}');
           if (AppConfig.hasSupabase) {
             if (session != null) {
               options.headers['Authorization'] =
@@ -150,8 +150,13 @@ class ApiClient {
     return res.data!;
   }
 
-  Future<void> cancelBooking(String commuteId) async {
-    await _dio.delete('/commutes/$commuteId/book');
+  Future<void> cancelBooking(String commuteId, {String? reason}) async {
+    await _dio.delete(
+      '/commutes/$commuteId/book',
+      data: {
+        if (reason != null && reason.trim().isNotEmpty) 'reason': reason.trim(),
+      },
+    );
   }
 
   Future<Map<String, dynamic>> createPaymentOrder(String bookingId) async {
@@ -202,19 +207,69 @@ class ApiClient {
     return (res.data!['passengers'] as List<dynamic>?) ?? [];
   }
 
+  Future<Map<String, dynamic>> getCommute(String commuteId) async {
+    final res = await _dio.get<Map<String, dynamic>>('/commutes/$commuteId');
+
+    return res.data!['commute'] as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> getActiveRide() async {
+    final res = await _dio.get<Map<String, dynamic>>('/commutes/active');
+
+    return res.data!;
+  }
+
   Future<void> completeRide(String commuteId) async {
     await _dio.patch('/commutes/$commuteId/complete');
   }
 
-  Future<void> cancelRide(String commuteId) async {
-    await _dio.patch('/commutes/$commuteId/cancel');
+  Future<void> startRide(String commuteId) async {
+    await _dio.patch('/commutes/$commuteId/start');
   }
 
-  Future<Map<String, dynamic>> uploadStudentId(XFile file) async {
-    final bytes = await file.readAsBytes();
+  Future<void> acceptBooking(String commuteId, String bookingId) async {
+    await _dio.patch('/commutes/$commuteId/bookings/$bookingId/accept');
+  }
+
+  Future<void> rejectBooking(String commuteId, String bookingId) async {
+    await _dio.patch('/commutes/$commuteId/bookings/$bookingId/reject');
+  }
+
+  Future<Map<String, dynamic>> verifyPassengerOtp({
+    required String commuteId,
+    required String bookingId,
+    required String otp,
+  }) async {
+    final res = await _dio.post<Map<String, dynamic>>(
+      '/commutes/$commuteId/bookings/$bookingId/verify-otp',
+      data: {'otp': otp},
+    );
+
+    return res.data!;
+  }
+
+  Future<void> cancelRide(String commuteId, {String? reason}) async {
+    await _dio.patch(
+      '/commutes/$commuteId/cancel',
+      data: {
+        if (reason != null && reason.trim().isNotEmpty) 'reason': reason.trim(),
+      },
+    );
+  }
+
+  Future<Map<String, dynamic>> uploadStudentId({
+    required XFile frontFile,
+    required XFile backFile,
+  }) async {
+    final frontBytes = await frontFile.readAsBytes();
+    final backBytes = await backFile.readAsBytes();
 
     final formData = FormData.fromMap({
-      'idCard': MultipartFile.fromBytes(bytes, filename: file.name),
+      'frontIdCard': MultipartFile.fromBytes(
+        frontBytes,
+        filename: frontFile.name,
+      ),
+      'backIdCard': MultipartFile.fromBytes(backBytes, filename: backFile.name),
     });
 
     final res = await _dio.post<Map<String, dynamic>>(
@@ -226,8 +281,13 @@ class ApiClient {
     return res.data!;
   }
 
-  Future<Map<String, dynamic>> getVerificationStatus() async {
-    final res = await _dio.get<Map<String, dynamic>>('/verification/status');
+  Future<Map<String, dynamic>> getVerificationStatus({
+    required String type,
+  }) async {
+    final res = await _dio.get<Map<String, dynamic>>(
+      '/verification/status',
+      queryParameters: {'type': type},
+    );
 
     return res.data!;
   }
@@ -327,6 +387,7 @@ class ApiClient {
   Future<Map<String, dynamic>> updateProfile({
     required String fullName,
     required String phoneNumber,
+    required String institutionName,
     required String branch,
     required String rollNumber,
     required int admissionYear,
@@ -337,10 +398,39 @@ class ApiClient {
       data: {
         'full_name': fullName,
         'phone_number': phoneNumber,
+        'institution_name': institutionName,
         'branch': branch,
         'roll_number': rollNumber,
         'admission_year': admissionYear,
         if (avatarUrl != null) 'avatar_url': avatarUrl,
+      },
+    );
+
+    return res.data!;
+  }
+    Future<Map<String, dynamic>> getRatingEligible(
+    String commuteId,
+  ) async {
+    final res = await _dio.get<Map<String, dynamic>>(
+      '/commutes/$commuteId/rating-eligible',
+    );
+
+    return res.data!;
+  }
+
+  Future<Map<String, dynamic>> submitRating({
+    required String commuteId,
+    required String ratedId,
+    required int score,
+    String? comment,
+  }) async {
+    final res = await _dio.post<Map<String, dynamic>>(
+      '/commutes/$commuteId/ratings',
+      data: {
+        'rated_id': ratedId,
+        'score': score,
+        if (comment != null && comment.trim().isNotEmpty)
+          'comment': comment.trim(),
       },
     );
 

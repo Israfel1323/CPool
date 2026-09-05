@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/theme/app_theme.dart';
 import 'signup_screen.dart';
+import 'forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -34,22 +35,22 @@ class _LoginScreenState extends State<LoginScreen> {
     });
     try {
       await context.read<AuthProvider>().signInWithEmail(
-            _email.text,
-            _password.text,
-          );
- } catch (e) {
-  String message = 'Login failed';
+        _email.text,
+        _password.text,
+      );
+    } catch (e) {
+      String message = 'Login failed';
 
-  if (e.toString().contains('invalid_credentials')) {
-    message = 'Invalid email or password';
-  } else if (e.toString().contains('Email not confirmed')) {
-    message = 'Please verify your email before signing in';
-  }
+      if (e.toString().contains('invalid_credentials')) {
+        message = 'Invalid email or password';
+      } else if (e.toString().contains('Email not confirmed')) {
+        message = 'Please verify your email before signing in';
+      }
 
-  setState(() => _error = message);
-}finally {
-    if (mounted) setState(() => _loading = false);
-  }
+      setState(() => _error = message);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   Future<void> _google() async {
@@ -60,9 +61,9 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       await context.read<AuthProvider>().signInWithGoogle();
     } catch (e) {
-  setState(() {
-    _error = 'Google sign in failed. Please try again.';
-  });
+      setState(() {
+        _error = 'Google sign in failed. Please try again.';
+      });
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -103,8 +104,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   labelText: 'Email',
                   prefixIcon: Icon(Icons.email_outlined),
                 ),
-                validator: (v) =>
-                    v == null || !v.contains('@') ? 'Enter a valid email' : null,
+                validator: (v) => v == null || !v.contains('@')
+                    ? 'Enter a valid email'
+                    : null,
               ),
               const SizedBox(height: 14),
               TextFormField(
@@ -117,9 +119,27 @@ class _LoginScreenState extends State<LoginScreen> {
                 validator: (v) =>
                     v == null || v.length < 6 ? 'Min 6 characters' : null,
               ),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: _loading
+                      ? null
+                      : () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => const ForgotPasswordScreen(),
+                            ),
+                          );
+                        },
+                  child: const Text('Forgot password?'),
+                ),
+              ),
               if (_error != null) ...[
                 const SizedBox(height: 12),
-                Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                Text(
+                  _error!,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
               ],
               const SizedBox(height: 24),
               FilledButton(
@@ -131,12 +151,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Text('Sign in with email'),
-              ),
-              const SizedBox(height: 12),
-              OutlinedButton.icon(
-                onPressed: _loading || !auth.isConfigured ? null : _google,
-                icon: const Icon(Icons.g_mobiledata_rounded, size: 28),
-                label: const Text('Continue with Google'),
               ),
               const SizedBox(height: 20),
               TextButton(

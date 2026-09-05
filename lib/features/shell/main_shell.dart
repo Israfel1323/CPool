@@ -1,12 +1,17 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
 import '../../core/theme/app_theme.dart';
 import '../../widgets/theme_toggle.dart';
-import '../chat/chat_screen.dart';
+import '../../core/providers/auth_provider.dart';
+import '../../core/api/api_client.dart';
+
 import '../home/home_screen.dart';
 import '../profile/profile_screen.dart';
-import '../commutes/offer_ride_screen.dart';
 import '../rides/my_rides_screen.dart';
-import '../search/search_screen.dart';
+import '../operations/presentation/pages/operations_home_page.dart';
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
@@ -15,33 +20,124 @@ class MainShell extends StatefulWidget {
   State<MainShell> createState() => _MainShellState();
 }
 
-class _MainShellState extends State<MainShell> {
+class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
   int _currentIndex = 0;
 
-  static const _destinations = [
-    (icon: Icons.home_rounded, label: 'Home'),
-    (icon: Icons.search_rounded, label: 'Search'),
-    (icon: Icons.route_rounded, label: 'Rides'),
-    (icon: Icons.chat_bubble_rounded, label: 'Chat'),
-    (icon: Icons.person_rounded, label: 'Profile'),
-  ];
+  bool _hasActiveRide = false;
+  bool _checkingActiveRide = true;
 
-  final _screens = const [
-    HomeScreen(),
-    SearchScreen(),
-    MyRidesScreen(),
-    ChatScreen(),
-    ProfileScreen(),
-  ];
+  Map<String, dynamic>? _activeRide;
+  bool _activeRideIsDriver = false;
+
+  final ApiClient _api = ApiClient();
+
+  Timer? _rideRefreshTimer;
+
+  @override
+  void initState() {
+    super.initState();
+
+    WidgetsBinding.instance.addObserver(this);
+
+    _checkActiveRide();
+
+    // Backup synchronization for ride changes happening
+    // from another user, such as passenger bookings.
+    _rideRefreshTimer = Timer.periodic(
+      const Duration(seconds: 3),
+      (_) => _checkActiveRide(),
+    );
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _rideRefreshTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _checkActiveRide();
+    }
+  }
+
+  Future<void> _checkActiveRide() async {
+    try {
+      final result = await _api.getActiveRide();
+
+      if (!mounted) return;
+
+      final hasActiveRide = result['active'] == true;
+
+      final nextRide = hasActiveRide
+          ? Map<String, dynamic>.from(result['commute'])
+          : null;
+
+      final nextIsDriver = hasActiveRide && result['is_driver'] == true;
+
+      final rideChanged =
+          _hasActiveRide != hasActiveRide ||
+          _activeRide?['id'] != nextRide?['id'] ||
+          _activeRide?['status'] != nextRide?['status'] ||
+          _activeRideIsDriver != nextIsDriver;
+
+      if (!rideChanged && !_checkingActiveRide) return;
+
+      setState(() {
+        _hasActiveRide = hasActiveRide;
+        _activeRide = nextRide;
+        _activeRideIsDriver = nextIsDriver;
+        _checkingActiveRide = false;
+      });
+    } catch (_) {
+      // During normal refreshes, keep the existing ride state if there is
+      // a temporary network/API failure.
+      if (_checkingActiveRide && mounted) {
+        setState(() {
+          _checkingActiveRide = false;
+        });
+      }
+    }
+  }
 
   void _onTabSelected(int index) {
     if (_currentIndex == index) return;
+
     setState(() => _currentIndex = index);
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = context.cpoolTheme;
+    final auth = context.watch<AuthProvider>();
+    if (_checkingActiveRide) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    final isAdmin =
+        auth.user?.email?.toLowerCase() == 'omar.afeef654@gmail.com';
+
+    final destinations = [
+      (icon: Icons.home_rounded, label: 'Home'),
+      (icon: Icons.route_rounded, label: 'Rides'),
+      if (isAdmin)
+        (icon: Icons.admin_panel_settings_rounded, label: 'Operations'),
+      (icon: Icons.person_rounded, label: 'Profile'),
+    ];
+
+    final screens = [
+      HomeScreen(
+        activeRide: _activeRide,
+        activeRideIsDriver: _activeRideIsDriver,
+        onRideEnded: _checkActiveRide,
+        onRideChanged: _checkActiveRide,
+      ),
+      const MyRidesScreen(),
+      if (isAdmin) const OperationsHomePage(),
+      const ProfileScreen(),
+    ];
 
     return Scaffold(
       body: AnimatedSwitcher(
@@ -60,7 +156,7 @@ class _MainShellState extends State<MainShell> {
         },
         child: KeyedSubtree(
           key: ValueKey(_currentIndex),
-          child: _screens[_currentIndex],
+          child: screens[_currentIndex],
         ),
       ),
       bottomNavigationBar: Container(
@@ -83,11 +179,17 @@ class _MainShellState extends State<MainShell> {
             labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
             animationDuration: const Duration(milliseconds: 350),
             destinations: [
-              for (final d in _destinations)
+              for (var i = 0; i < destinations.length; i++)
                 NavigationDestination(
-                  icon: Icon(d.icon),
-                  selectedIcon: Icon(d.icon),
-                  label: d.label,
+                  icon: Icon(
+                    destinations[i].icon,
+                    color: i == 0 && _hasActiveRide ? theme.border : null,
+                  ),
+                  selectedIcon: Icon(
+                    destinations[i].icon,
+                    color: i == 0 && _hasActiveRide ? theme.border : null,
+                  ),
+                  label: destinations[i].label,
                 ),
             ],
           ),

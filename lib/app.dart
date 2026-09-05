@@ -5,6 +5,7 @@ import 'core/providers/auth_provider.dart';
 import 'core/providers/theme_provider.dart';
 import 'core/theme/app_theme.dart';
 import 'features/app/app_gate.dart';
+import 'features/operations/presentation/providers/operations_provider.dart';
 
 class CPoolApp extends StatelessWidget {
   const CPoolApp({super.key});
@@ -15,6 +16,7 @@ class CPoolApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => OperationsProvider()),
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, _) {
@@ -25,8 +27,8 @@ class CPoolApp extends StatelessWidget {
             theme: AppTheme.light(),
             darkTheme: AppTheme.dark(),
             home: themeProvider.isLoaded
-    ? const AppGate()
-    : const _BootstrapLoader(),
+                ? const AppGate()
+                : const _BootstrapLoader(),
           );
         },
       ),

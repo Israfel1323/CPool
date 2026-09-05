@@ -6,7 +6,6 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:typed_data';
 
 class CompleteProfileScreen extends StatefulWidget {
-  
   final bool isEditing;
   final Map<String, dynamic>? profile;
 
@@ -17,376 +16,384 @@ class CompleteProfileScreen extends StatefulWidget {
   });
 
   @override
-  State<CompleteProfileScreen> createState() =>
-      _CompleteProfileScreenState();
-      
+  State<CompleteProfileScreen> createState() => _CompleteProfileScreenState();
 }
 
 class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   final ApiClient _api = ApiClient();
 
-bool _loading = false;
-Uint8List? _selectedImageBytes;
-XFile? _selectedImageFile;
+  bool _loading = false;
+  Uint8List? _selectedImageBytes;
+  XFile? _selectedImageFile;
 
-  final TextEditingController _fullNameController =
-      TextEditingController();
+  final TextEditingController _fullNameController = TextEditingController();
 
-  final TextEditingController _rollNumberController =
-      TextEditingController();
+  final TextEditingController _rollNumberController = TextEditingController();
 
-  final TextEditingController _phoneController =
-      TextEditingController();
+  final TextEditingController _branchController = TextEditingController();
 
-  String _selectedBranch = 'CSE';
+  final TextEditingController _phoneController = TextEditingController();
+
+  final TextEditingController _institutionController = TextEditingController();
+
   int _selectedYear = 2023;
 
-  final List<String> _branches = const [
-    'CSE',
-    'IT',
-    'CSM',
-    'CSD',
-    'CSB',
-    'ECE',
-    'EEE',
-    'MECH',
-    'MCT',
-    'MME',
-    'CIVIL',
-  ];
+  final List<int> _years = const [2023, 2024, 2025, 2026];
+  @override
+  void initState() {
+    super.initState();
 
-  final List<int> _years = const [
-    2023,
-    2024,
-    2025,
-    2026,
-  ];
-@override
-void initState() {
-  super.initState();
+    if (widget.isEditing && widget.profile != null) {
+      _fullNameController.text = widget.profile?['full_name'] ?? '';
 
-  if (widget.isEditing && widget.profile != null) {
-    _fullNameController.text =
-        widget.profile?['full_name'] ?? '';
+      _phoneController.text = widget.profile?['phone_number'] ?? '';
 
-    _phoneController.text =
-        widget.profile?['phone_number'] ?? '';
+      _rollNumberController.text = widget.profile?['roll_number'] ?? '';
 
-    _rollNumberController.text =
-        widget.profile?['roll_number'] ?? '';
+      _branchController.text = (widget.profile?['branch'] ?? '')
+          .toString()
+          .toUpperCase();
 
-    _selectedBranch =
-        widget.profile?['branch'] ?? 'CSE';
+      _institutionController.text = (widget.profile?['institution_name'] ?? '')
+          .toString()
+          .toUpperCase()
+          .toString()
+          .toUpperCase();
 
-    _selectedYear =
-        widget.profile?['admission_year'] ?? 2023;
+      _selectedYear = widget.profile?['admission_year'] ?? 2023;
+
+      _selectedYear = widget.profile?['admission_year'] ?? 2023;
+    }
   }
-}
+
   @override
   void dispose() {
     _fullNameController.dispose();
     _rollNumberController.dispose();
+    _branchController.dispose();
+    _institutionController.dispose();
     _phoneController.dispose();
     super.dispose();
   }
-Future<void> _submitProfile() async {
-  if (!_formKey.currentState!.validate()) {
-  return;
-}
-  setState(() {
-    _loading = true;
-  });
 
-  try {
-    String? avatarUrl;
+  Future<void> _submitProfile() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+    setState(() {
+      _loading = true;
+    });
 
-if (_selectedImageFile != null) {
-  avatarUrl = await _api.uploadProfilePhoto(_selectedImageFile!);
-}
-    await _api.updateProfile(
-      fullName: _fullNameController.text.trim(),
-      phoneNumber: _phoneController.text.trim(),
-      branch: _selectedBranch,
-      rollNumber: _rollNumberController.text.trim().toUpperCase(),
-      admissionYear: _selectedYear,
-      avatarUrl: avatarUrl,
-    );
+    try {
+      String? avatarUrl;
 
-    if (!mounted) return;
+      if (_selectedImageFile != null) {
+        avatarUrl = await _api.uploadProfilePhoto(_selectedImageFile!);
+      }
+      await _api.updateProfile(
+        fullName: _fullNameController.text.trim(),
+        phoneNumber: _phoneController.text.trim(),
+        institutionName: _institutionController.text.trim().toUpperCase(),
+        branch: _branchController.text.trim().toUpperCase(),
+        rollNumber: _rollNumberController.text.trim().toUpperCase(),
+        admissionYear: _selectedYear,
+        avatarUrl: avatarUrl,
+      );
 
-    ScaffoldMessenger.of(context).showSnackBar(
-  SnackBar(
-    content: Text(
-      widget.isEditing
-          ? "Profile updated successfully! 🎉"
-          : "Profile completed successfully! 🎉",
-    ),
-  ),
-);
+      if (!mounted) return;
 
-    if (widget.isEditing) {
-  Navigator.pop(context, true);
-} else {
-  Navigator.pushReplacement(
-    context,
-    MaterialPageRoute(
-      builder: (_) => const MainShell(),
-    ),
-  );
-}
-  } on DioException catch (e) {
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          e.response?.data?['error']?.toString() ??
-              'Something went wrong.',
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            widget.isEditing
+                ? "Profile updated successfully! 🎉"
+                : "Profile completed successfully! 🎉",
+          ),
         ),
-      ),
-    );
-  } finally {
-    if (mounted) {
-      setState(() {
-        _loading = false;
-      });
+      );
+
+      if (widget.isEditing) {
+        Navigator.pop(context, true);
+      } else {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const MainShell()),
+        );
+      }
+    } on DioException catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            e.response?.data?['error']?.toString() ?? 'Something went wrong.',
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+        });
+      }
     }
   }
-}
-final ImagePicker _picker = ImagePicker();
 
-Future<void> _pickImage() async {
-  final XFile? image = await _picker.pickImage(
-    source: ImageSource.gallery,
-    imageQuality: 80,
-  );
+  final ImagePicker _picker = ImagePicker();
 
-  if (image == null) return;
+  Future<void> _pickImage() async {
+    final XFile? image = await _picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 80,
+    );
 
-  final bytes = await image.readAsBytes();
+    if (image == null) return;
 
-setState(() {
-  _selectedImageBytes = bytes;
-  _selectedImageFile = image;
-});
-}
+    final bytes = await image.readAsBytes();
+
+    setState(() {
+      _selectedImageBytes = bytes;
+      _selectedImageFile = image;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-  widget.isEditing
-      ? "Edit Profile"
-      : "Complete Profile",
-),
+        title: Text(widget.isEditing ? "Edit Profile" : "Complete Profile"),
         centerTitle: true,
       ),
       body: SafeArea(
-  child: Center(
-    child: ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 650),
-      child: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(24),
-          children: [
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 650),
+            child: Form(
+              key: _formKey,
+              child: ListView(
+                padding: const EdgeInsets.all(24),
+                children: [
+                  const SizedBox(height: 10),
+                  Center(
+                    child: Column(
+                      children: [
+                        GestureDetector(
+                          onTap: _pickImage,
+                          child: CircleAvatar(
+                            radius: 55,
+                            backgroundImage: _selectedImageBytes != null
+                                ? MemoryImage(_selectedImageBytes!)
+                                : null,
+                            child: _selectedImageBytes == null
+                                ? const Icon(Icons.person, size: 55)
+                                : null,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        TextButton.icon(
+                          onPressed: _pickImage,
+                          icon: const Icon(Icons.add_a_photo_outlined),
+                          label: Text(
+                            widget.isEditing
+                                ? "Change Profile Photo"
+                                : "Add Profile Photo",
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
 
-              const SizedBox(height: 10),
-              Center(
-  child: Column(
-    children: [
-      GestureDetector(
-        onTap: _pickImage,
-        child:CircleAvatar(
-  radius: 55,
-  backgroundImage: _selectedImageBytes != null
-      ? MemoryImage(_selectedImageBytes!)
-      : null,
-  child: _selectedImageBytes == null
-      ? const Icon(
-          Icons.person,
-          size: 55,
-        )
-      : null,
-),
-      ),
-      const SizedBox(height: 12),
-      TextButton.icon(
-        onPressed: _pickImage,
-        icon: const Icon(Icons.add_a_photo_outlined),
-        label: Text(
-  widget.isEditing
-      ? "Change Profile Photo"
-      : "Add Profile Photo",
-),
-      ),
-    ],
-  ),
-),
+                  const SizedBox(height: 24),
 
-const SizedBox(height: 24),
+                  Text(
+                    widget.isEditing
+                        ? "Edit your Profile"
+                        : "Welcome to CPool 👋",
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
 
-              Text(
-                widget.isEditing
-    ? "Edit your Profile"
-    : "Welcome to CPool 👋",
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+                  const SizedBox(height: 8),
+
+                  Text(
+                    widget.isEditing
+                        ? "Update your details anytime."
+                        : "Let's get your profile ready. This will only take a minute.",
+                    style: theme.textTheme.bodyMedium,
+                  ),
+
+                  const SizedBox(height: 32),
+
+                  TextFormField(
+                    controller: _fullNameController,
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Please enter your full name';
+                      }
+                      return null;
+                    },
+                    decoration: const InputDecoration(
+                      labelText: "Full Name",
+                      prefixIcon: Icon(Icons.person_outline),
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  TextFormField(
+                    controller: _institutionController,
+                    textCapitalization: TextCapitalization.characters,
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Please enter your institution';
+                      }
+
+                      return null;
+                    },
+                    onChanged: (value) {
+                      final uppercaseValue = value.toUpperCase();
+
+                      if (value != uppercaseValue) {
+                        _institutionController.value = _institutionController
+                            .value
+                            .copyWith(
+                              text: uppercaseValue,
+                              selection: TextSelection.collapsed(
+                                offset: uppercaseValue.length,
+                              ),
+                            );
+                      }
+                    },
+                    decoration: const InputDecoration(
+                      labelText: 'Institution',
+                      prefixIcon: Icon(Icons.school_outlined),
+                      hintText: 'Ex: MGIT',
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  TextFormField(
+                    controller: _branchController,
+                    textCapitalization: TextCapitalization.characters,
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Please enter your branch';
+                      }
+
+                      return null;
+                    },
+                    onChanged: (value) {
+                      final uppercaseValue = value.toUpperCase();
+
+                      if (value != uppercaseValue) {
+                        _branchController.value = _branchController.value
+                            .copyWith(
+                              text: uppercaseValue,
+                              selection: TextSelection.collapsed(
+                                offset: uppercaseValue.length,
+                              ),
+                            );
+                      }
+                    },
+                    decoration: const InputDecoration(
+                      labelText: 'Branch',
+                      prefixIcon: Icon(Icons.account_tree_outlined),
+                      hintText: 'Ex: CSE',
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  TextFormField(
+                    controller: _rollNumberController,
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Please enter your student ID';
+                      }
+                      return null;
+                    },
+                    decoration: const InputDecoration(
+                      labelText: "Roll Number",
+                      prefixIcon: Icon(Icons.badge_outlined),
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  DropdownButtonFormField<int>(
+                    initialValue: _selectedYear,
+                    decoration: const InputDecoration(
+                      labelText: "Admission Year",
+                      prefixIcon: Icon(Icons.calendar_month_outlined),
+                    ),
+                    items: _years
+                        .map(
+                          (year) => DropdownMenuItem(
+                            value: year,
+                            child: Text(year.toString()),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedYear = value!;
+                      });
+                    },
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  TextFormField(
+                    controller: _phoneController,
+                    validator: (value) {
+                      final phone = value?.trim() ?? '';
+
+                      if (phone.isEmpty) {
+                        return 'Please enter your phone number';
+                      }
+
+                      if (!RegExp(r'^\d{10}$').hasMatch(phone)) {
+                        return 'Enter a valid 10-digit phone number';
+                      }
+
+                      return null;
+                    },
+                    keyboardType: TextInputType.phone,
+                    decoration: const InputDecoration(
+                      labelText: "Phone Number",
+                      prefixIcon: Icon(Icons.phone_outlined),
+                    ),
+                  ),
+
+                  const SizedBox(height: 40),
+
+                  SizedBox(
+                    height: 55,
+                    child: FilledButton(
+                      onPressed: _loading ? null : _submitProfile,
+                      child: _loading
+                          ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : Text(
+                              widget.isEditing
+                                  ? "Save Changes"
+                                  : "Save & Continue",
+                            ),
+                    ),
+                  ),
+                ],
               ),
-
-              const SizedBox(height: 8),
-
-              Text(
-  widget.isEditing
-      ? "Update your details anytime."
-      : "Let's get your profile ready. This will only take a minute.",
-  style: theme.textTheme.bodyMedium,
-),
-
-              const SizedBox(height: 32),
-
-              TextFormField(
-                controller: _fullNameController,
-                validator: (value) {
-    if (value == null || value.trim().isEmpty) {
-      return 'Please enter your full name';
-    }
-    return null;
-  },
-                decoration: const InputDecoration(
-                  labelText: "Full Name",
-                  prefixIcon: Icon(Icons.person_outline),
-                ),
-              ),
-
-              const SizedBox(height: 20),
-
-              TextFormField(
-                initialValue: "MGIT",
-                enabled: false,
-                decoration: const InputDecoration(
-                  labelText: "Institution",
-                  prefixIcon: Icon(Icons.school_outlined),
-                ),
-              ),
-
-              const SizedBox(height: 20),
-
-              DropdownButtonFormField<String>(
-                initialValue: _selectedBranch,
-                decoration: const InputDecoration(
-                  labelText: "Branch",
-                  prefixIcon: Icon(Icons.account_tree_outlined),
-                ),
-                items: _branches
-                    .map(
-                      (branch) => DropdownMenuItem(
-                        value: branch,
-                        child: Text(branch),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _selectedBranch = value!;
-                  });
-                },
-              ),
-
-              const SizedBox(height: 20),
-
-              TextFormField(
-                controller: _rollNumberController,
-                validator: (value) {
-  if (value == null || value.trim().isEmpty) {
-    return 'Please enter your student ID';
-  }
-  return null;
-},
-                decoration: const InputDecoration(
-                  labelText: "Roll Number",
-                  prefixIcon: Icon(Icons.badge_outlined),
-                ),
-              ),
-
-              const SizedBox(height: 20),
-
-              DropdownButtonFormField<int>(
-                initialValue: _selectedYear,
-                decoration: const InputDecoration(
-                  labelText: "Admission Year",
-                  prefixIcon: Icon(Icons.calendar_month_outlined),
-                ),
-                items: _years
-                    .map(
-                      (year) => DropdownMenuItem(
-                        value: year,
-                        child: Text(year.toString()),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _selectedYear = value!;
-                  });
-                },
-              ),
-
-              const SizedBox(height: 20),
-
-              TextFormField(
-                controller: _phoneController,
-                validator: (value) {
-  final phone = value?.trim() ?? '';
-
-  if (phone.isEmpty) {
-    return 'Please enter your phone number';
-  }
-
-  if (!RegExp(r'^\d{10}$').hasMatch(phone)) {
-    return 'Enter a valid 10-digit phone number';
-  }
-
-  return null;
-},
-                keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(
-                  labelText: "Phone Number",
-                  prefixIcon: Icon(Icons.phone_outlined),
-                ),
-              ),
-
-              const SizedBox(height: 40),
-
-              SizedBox(
-                height: 55,
-                child: FilledButton(
-                  onPressed: _loading ? null : _submitProfile,
-                  child: _loading
-    ? const SizedBox(
-        width: 22,
-        height: 22,
-        child: CircularProgressIndicator(
-          strokeWidth: 2,
-        ),
-      )
-    : Text(
-        widget.isEditing
-    ? "Save Changes"
-    : "Save & Continue",
-      ),
-                ),
-              ),
-                     ],
+            ),
           ),
         ),
       ),
-    ),
-  ),
-);
+    );
   }
 }

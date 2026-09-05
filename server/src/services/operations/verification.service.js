@@ -20,6 +20,11 @@ export async function getVerificationRequests({
     conditions.push(`vr.status = $${values.length}`);
   }
 
+  if (type) {
+    values.push(type);
+    conditions.push(`vr.verification_type = $${values.length}`);
+  }
+
   if (search) {
     values.push(`%${search}%`);
 
@@ -227,6 +232,44 @@ export async function updateVerificationStatusWithAudit({
 
     if (!verification) {
       throw new Error('Verification request not found.');
+    }
+    if (
+      verification.verification_type === 'driver' &&
+      status === 'approved'
+    ) {
+      await client.query(
+        `
+    UPDATE driver_details
+    SET
+      verification_status = 'approved',
+      verified_at = NOW(),
+      updated_at = NOW()
+    WHERE user_id = $1;
+    `,
+        [verification.profile_id]
+      );
+    }
+
+    // Keep the user's driver verification status in sync
+    // with the verification request.
+    if (verification.verification_type === 'driver') {
+      await client.query(
+        `
+    UPDATE driver_details
+    SET
+      verification_status = $2,
+      verified_at = CASE
+        WHEN $2 = 'approved' THEN NOW()
+        ELSE NULL
+      END,
+      updated_at = NOW()
+    WHERE user_id = $1;
+    `,
+        [
+          verification.profile_id,
+          status,
+        ]
+      );
     }
 
     await logOperation({

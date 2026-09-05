@@ -32,8 +32,8 @@ VALUES (
        email = EXCLUDED.email,
 
 display_name = COALESCE(
-    EXCLUDED.display_name,
-    profiles.display_name
+    profiles.display_name,
+    EXCLUDED.display_name
 ),
 
 full_name = COALESCE(
@@ -49,12 +49,12 @@ avatar_url = COALESCE(
 updated_at = NOW()
      RETURNING *`,
     [
-  u.id,
-  u.email,
-  displayName,
-  displayName,
-  u.user_metadata?.avatar_url ?? null,
-],
+      u.id,
+      u.email,
+      displayName,
+      displayName,
+      u.user_metadata?.avatar_url ?? null,
+    ],
   );
 
   res.json({ profile: result.rows[0] });
@@ -70,28 +70,33 @@ router.get('/me', requireAuth, async (req, res) => {
 
 router.patch('/me', requireAuth, async (req, res) => {
   const {
-  full_name,
-  phone_number,
-  branch,
-  roll_number,
-  admission_year,
-  avatar_url,
-} = req.body;
+    full_name,
+    phone_number,
+    institution_name,
+    branch,
+    roll_number,
+    admission_year,
+    avatar_url,
+  } = req.body;
   const result = await query(
     `UPDATE profiles
 SET
+
+display_name = COALESCE($2, display_name),
 
 full_name = COALESCE($2, full_name),
 
 phone_number = COALESCE($3, phone_number),
 
-branch = COALESCE($4, branch),
+institution_name = COALESCE($4, institution_name),
 
-roll_number = COALESCE($5, roll_number),
+branch = COALESCE($5, branch),
 
-admission_year = COALESCE($6, admission_year),
+roll_number = COALESCE($6, roll_number),
 
-avatar_url = COALESCE($7, avatar_url),
+admission_year = COALESCE($7, admission_year),
+
+avatar_url = COALESCE($8, avatar_url),
 
 profile_completed = TRUE,
 
@@ -101,14 +106,15 @@ WHERE id = $1
 
 RETURNING *`,
     [
-  req.user.id,
-  full_name,
-  phone_number,
-  branch,
-  roll_number,
-  admission_year,
-  avatar_url,
-]
+      req.user.id,
+      full_name,
+      phone_number,
+      institution_name,
+      branch,
+      roll_number,
+      admission_year,
+      avatar_url,
+    ]
   );
   res.json({ profile: result.rows[0] });
 });

@@ -12,13 +12,26 @@ class AuthProvider extends ChangeNotifier {
     if (AppConfig.hasSupabase) {
       _subscription = Supabase.instance.client.auth.onAuthStateChange.listen(
         (event) {
+          if (event.event == AuthChangeEvent.passwordRecovery) {
+            _isPasswordRecovery = true;
+          } else if (event.event == AuthChangeEvent.signedOut) {
+            _isPasswordRecovery = false;
+          }
+
           notifyListeners();
-          if (event.session != null) {
+
+          if (event.session != null && !_isPasswordRecovery) {
             _syncProfile();
           }
         },
+        onError: (error, stackTrace) {
+          debugPrint('Auth state error: $error');
+        },
       );
-      if (isSignedIn) _syncProfile();
+
+      if (isSignedIn) {
+        _syncProfile();
+      }
     }
   }
 
@@ -27,14 +40,15 @@ class AuthProvider extends ChangeNotifier {
   ApiClient get api => _api;
   String? _syncError;
   Map<String, dynamic>? _profile;
+  bool _isPasswordRecovery = false;
 
   String? get syncError => _syncError;
   Map<String, dynamic>? get profile => _profile;
+  bool get isPasswordRecovery => _isPasswordRecovery;
 
   bool get isConfigured => AppConfig.hasSupabase;
-  User? get user => AppConfig.hasSupabase
-      ? Supabase.instance.client.auth.currentUser
-      : null;
+  User? get user =>
+      AppConfig.hasSupabase ? Supabase.instance.client.auth.currentUser : null;
   bool get isSignedIn => user != null;
   String get displayName =>
       _profile?['display_name'] as String? ??
@@ -58,6 +72,25 @@ class AuthProvider extends ChangeNotifier {
       password: password,
     );
     await _syncProfile();
+  }
+
+  Future<void> sendPasswordResetEmail(String email) async {
+    _ensureSupabase();
+
+    final redirectUrl = kIsWeb ? Uri.base.origin : null;
+
+    await Supabase.instance.client.auth.resetPasswordForEmail(
+      email.trim(),
+      redirectTo: redirectUrl,
+    );
+  }
+
+  Future<void> updatePassword(String newPassword) async {
+    _ensureSupabase();
+
+    await Supabase.instance.client.auth.updateUser(
+      UserAttributes(password: newPassword),
+    );
   }
 
   Future<void> signInWithGoogle() async {
@@ -96,9 +129,13 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> signOut() async {
     if (!AppConfig.hasSupabase) return;
+
     await Supabase.instance.client.auth.signOut();
+
     _profile = null;
     _syncError = null;
+    _isPasswordRecovery = false;
+
     notifyListeners();
   }
 
@@ -115,7 +152,6 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> refreshProfile() async {
-    
     if (!isSignedIn || !AppConfig.hasApi) return;
     try {
       final data = await _api.getProfile();
@@ -126,9 +162,13 @@ class AuthProvider extends ChangeNotifier {
     }
     notifyListeners();
   }
+
   bool get profileCompleted =>
-    (_profile?['profile_completed'] ?? false) == true;
-    bool get isProfileLoaded => _profile != null;
+      (_profile?['profile_completed'] ?? false) == true;
+
+  bool get isProfileLoaded => _profile != null;
+
+  bool get isAdmin => (_profile?['role'] as String?)?.toLowerCase() == 'admin';
 
   void _ensureSupabase() {
     if (!AppConfig.hasSupabase) {

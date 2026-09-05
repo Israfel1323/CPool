@@ -241,341 +241,245 @@ class _SearchScreenState extends State<SearchScreen> {
 
     return Scaffold(
       appBar: const CPoolAppBar(title: 'Find a Ride'),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "Find a Ride",
-                  style: Theme.of(context).textTheme.headlineSmall,
-                ),
-
-                const SizedBox(height: 6),
-
-                Text(
-                  "Find your next ride in seconds.",
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-
-                const SizedBox(height: 24),
-
-                LocationCard(
-                  title: "From",
-                  hint: "Current Location",
-                  icon: Icons.trip_origin_rounded,
-                  controller: _fromCtrl,
-
-                  trailing: _loadingLocation
-                      ? const Padding(
-                          padding: EdgeInsets.all(12),
-                          child: SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          ),
-                        )
-                      : IconButton(
-                          icon: const Icon(Icons.refresh),
-                          tooltip: 'Refresh location',
-                          onPressed: _getCurrentLocation,
-                        ),
-
-                  onTap: () => setState(() => _activeField = _ActiveField.from),
-                  onChanged: (value) =>
-                      _onSearchChanged(value, _ActiveField.from),
-                ),
-
-                const SizedBox(height: 20),
-                if (_activeField == _ActiveField.from &&
-                    _suggestions.isNotEmpty)
-                  _buildSuggestions(),
-
-                const SizedBox(height: 20),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text("To"),
-                    TextField(
-                      controller: _toCtrl,
-                      onTap: () {
-                        debugPrint("TO TAP");
-                        setState(() => _activeField = _ActiveField.to);
-                      },
-                      onChanged: (value) {
-                        debugPrint("TO CHANGED: $value");
-                        _onSearchChanged(value, _ActiveField.to);
-                      },
-                      decoration: const InputDecoration(
-                        hintText: "Search destination",
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 20),
-
-                if (_activeField == _ActiveField.to && _suggestions.isNotEmpty)
-                  _buildSuggestions(),
-
-                const SizedBox(height: 20),
-
-                const SizedBox(height: 20),
-
-                SearchFilters(
-                  womenOnly: _womenOnly,
-                  bikeRide: _bikeRide,
-                  onWomenOnlyChanged: (value) {
-                    setState(() {
-                      _womenOnly = value;
-                    });
-                  },
-                  onBikeRideChanged: (value) {
-                    setState(() {
-                      _bikeRide = value;
-                    });
-                  },
-                ),
-
-                const SizedBox(height: 24),
-                SearchButton(
-                  loading: _loadingCommutes,
-                  onPressed: () async {
-                    FocusScope.of(context).unfocus();
-
-                    if (_from == null) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Please select a pickup location'),
-                        ),
-                      );
-                      return;
-                    }
-
-                    if (_to == null) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Please select a destination'),
-                        ),
-                      );
-                      return;
-                    }
-
-                    await _searchCommutes();
-
-                    if (!mounted) return;
-
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => RideResultsScreen(commutes: _commutes),
-                      ),
-                    );
-                  },
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: Stack(
-              children: [
-                FlutterMap(
-                  mapController: _mapController,
-                  options: MapOptions(
-                    initialCenter: _mapCenter,
-                    initialZoom: 11,
-                    interactionOptions: const InteractionOptions(
-                      flags: InteractiveFlag.all,
-                    ),
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Find a Ride",
+                    style: Theme.of(context).textTheme.headlineSmall,
                   ),
 
-                  children: [
-                    TileLayer(
-                      urlTemplate:
-                          'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                      userAgentPackageName: 'com.cpool.cpool_app',
-                    ),
-                    if (_currentPosition != null)
-                      MarkerLayer(
-                        markers: [
-                          Marker(
-                            point: LatLng(
-                              _currentPosition!.latitude,
-                              _currentPosition!.longitude,
-                            ),
-                            width: 40,
-                            height: 40,
-                            child: const Icon(
-                              Icons.my_location,
-                              color: Colors.blue,
-                              size: 32,
-                            ),
-                          ),
-                        ],
-                      ),
+                  const SizedBox(height: 6),
 
-                    if (_from != null)
-                      MarkerLayer(
-                        markers: [
-                          Marker(
-                            point: LatLng(_from!.lat, _from!.lon),
-                            width: 40,
-                            height: 40,
-                            child: const Icon(
-                              Icons.trip_origin,
-                              color: Colors.green,
-                              size: 32,
+                  Text(
+                    "Find your next ride in seconds.",
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  LocationCard(
+                    title: "From",
+                    hint: "Current Location",
+                    icon: Icons.trip_origin_rounded,
+                    controller: _fromCtrl,
+
+                    trailing: _loadingLocation
+                        ? const Padding(
+                            padding: EdgeInsets.all(12),
+                            child: SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
                             ),
+                          )
+                        : IconButton(
+                            icon: const Icon(Icons.refresh),
+                            tooltip: 'Refresh location',
+                            onPressed: _getCurrentLocation,
                           ),
-                        ],
-                      ),
-                    if (_to != null)
-                      MarkerLayer(
-                        markers: [
-                          Marker(
-                            point: LatLng(_to!.lat, _to!.lon),
-                            width: 40,
-                            height: 40,
-                            child: Icon(
-                              Icons.place,
-                              color: Theme.of(context).colorScheme.primary,
-                              size: 32,
-                            ),
-                          ),
-                        ],
-                      ),
-                  ],
-                ),
-                if (_error != null)
-                  Positioned(
-                    left: 16,
-                    right: 16,
-                    bottom: 8,
-                    child: Material(
-                      color: theme.card,
-                      borderRadius: BorderRadius.circular(12),
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Text(
-                          _error!,
-                          style: Theme.of(context).textTheme.bodySmall,
+
+                    onTap: () =>
+                        setState(() => _activeField = _ActiveField.from),
+                    onChanged: (value) =>
+                        _onSearchChanged(value, _ActiveField.from),
+                  ),
+
+                  const SizedBox(height: 20),
+                  if (_activeField == _ActiveField.from &&
+                      _suggestions.isNotEmpty)
+                    _buildSuggestions(),
+
+                  const SizedBox(height: 20),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text("To"),
+                      TextField(
+                        controller: _toCtrl,
+                        onTap: () {
+                          debugPrint("TO TAP");
+                          setState(() => _activeField = _ActiveField.to);
+                        },
+                        onChanged: (value) {
+                          debugPrint("TO CHANGED: $value");
+                          _onSearchChanged(value, _ActiveField.to);
+                        },
+                        decoration: const InputDecoration(
+                          hintText: "Search destination",
                         ),
                       ),
-                    ),
+                    ],
                   ),
-              ],
+
+                  const SizedBox(height: 20),
+
+                  if (_activeField == _ActiveField.to &&
+                      _suggestions.isNotEmpty)
+                    _buildSuggestions(),
+
+                  const SizedBox(height: 20),
+
+                  SearchFilters(
+                    womenOnly: _womenOnly,
+                    bikeRide: _bikeRide,
+                    onWomenOnlyChanged: (value) {
+                      setState(() {
+                        _womenOnly = value;
+                      });
+                    },
+                    onBikeRideChanged: (value) {
+                      setState(() {
+                        _bikeRide = value;
+                      });
+                    },
+                  ),
+
+                  const SizedBox(height: 24),
+                  SearchButton(
+                    loading: _loadingCommutes,
+                    onPressed: () async {
+                      FocusScope.of(context).unfocus();
+
+                      if (_from == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Please select a pickup location'),
+                          ),
+                        );
+                        return;
+                      }
+
+                      if (_to == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Please select a destination'),
+                          ),
+                        );
+                        return;
+                      }
+
+                      await _searchCommutes();
+
+                      if (!mounted) return;
+
+                      final booked = await Navigator.push<bool>(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              RideResultsScreen(commutes: _commutes),
+                        ),
+                      );
+
+                      if (!context.mounted) return;
+
+                      if (booked == true) {
+                        Navigator.of(context).pop(true);
+                      }
+                    },
+                  ),
+                ],
+              ),
             ),
-          ),
-          if (_commutes.isNotEmpty)
+
             SizedBox(
-              height: 220,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.all(12),
-                itemCount: _commutes.length,
-                separatorBuilder: (_, index) => const SizedBox(width: 10),
-                itemBuilder: (_, i) {
-                  final c = _commutes[i];
-                  return SizedBox(
-                    width: 220,
-                    child: Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              c.fromAddress,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context).textTheme.labelLarge,
-                            ),
-                            Text(
-                              '→ ${c.toAddress}',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
+              height: 320,
+              child: Stack(
+                children: [
+                  FlutterMap(
+                    mapController: _mapController,
+                    options: MapOptions(
+                      initialCenter: _mapCenter,
+                      initialZoom: 11,
+                      interactionOptions: const InteractionOptions(
+                        flags: InteractiveFlag.all,
+                      ),
+                    ),
 
-                            const Spacer(),
-
-                            Text(
-                              c.costDisplay,
-                              style: Theme.of(context).textTheme.labelLarge,
-                            ),
-
-                            const SizedBox(height: 4),
-
-                            Text(
-                              'Seats: ${c.seatsAvailable}',
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-
-                            const SizedBox(height: 8),
-
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton(
-                                onPressed: c.alreadyBooked
-                                    ? null
-                                    : () async {
-                                        try {
-                                          final result = await _api.bookCommute(
-                                            c.id,
-                                          );
-
-                                          if (!mounted) return;
-
-                                          ScaffoldMessenger.of(
-                                            context,
-                                          ).showSnackBar(
-                                            const SnackBar(
-                                              content: Text(
-                                                'Ride booked successfully',
-                                              ),
-                                            ),
-                                          );
-
-                                          debugPrint(result.toString());
-
-                                          await _searchCommutes();
-                                        } catch (e) {
-                                          String message =
-                                              'Something went wrong';
-
-                                          if (e is DioException) {
-                                            message =
-                                                e.response?.data?['error']
-                                                    ?.toString() ??
-                                                e.message ??
-                                                message;
-                                          }
-
-                                          ScaffoldMessenger.of(
-                                            context,
-                                          ).showSnackBar(
-                                            SnackBar(content: Text(message)),
-                                          );
-                                        }
-                                      },
-                                child: Text(
-                                  c.alreadyBooked
-                                      ? 'Already Booked'
-                                      : 'Book Ride',
-                                ),
+                    children: [
+                      TileLayer(
+                        urlTemplate:
+                            'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        userAgentPackageName: 'com.cpool.cpool_app',
+                      ),
+                      if (_currentPosition != null)
+                        MarkerLayer(
+                          markers: [
+                            Marker(
+                              point: LatLng(
+                                _currentPosition!.latitude,
+                                _currentPosition!.longitude,
+                              ),
+                              width: 40,
+                              height: 40,
+                              child: const Icon(
+                                Icons.my_location,
+                                color: Colors.blue,
+                                size: 32,
                               ),
                             ),
                           ],
                         ),
+
+                      if (_from != null)
+                        MarkerLayer(
+                          markers: [
+                            Marker(
+                              point: LatLng(_from!.lat, _from!.lon),
+                              width: 40,
+                              height: 40,
+                              child: const Icon(
+                                Icons.trip_origin,
+                                color: Colors.green,
+                                size: 32,
+                              ),
+                            ),
+                          ],
+                        ),
+                      if (_to != null)
+                        MarkerLayer(
+                          markers: [
+                            Marker(
+                              point: LatLng(_to!.lat, _to!.lon),
+                              width: 40,
+                              height: 40,
+                              child: Icon(
+                                Icons.place,
+                                color: Theme.of(context).colorScheme.primary,
+                                size: 32,
+                              ),
+                            ),
+                          ],
+                        ),
+                    ],
+                  ),
+                  if (_error != null)
+                    Positioned(
+                      left: 16,
+                      right: 16,
+                      bottom: 8,
+                      child: Material(
+                        color: theme.card,
+                        borderRadius: BorderRadius.circular(12),
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Text(
+                            _error!,
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ),
                       ),
                     ),
-                  );
-                },
+                ],
               ),
             ),
-        ],
+          ],
+        ),
       ),
     );
   }

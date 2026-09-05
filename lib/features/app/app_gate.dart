@@ -1,13 +1,15 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../../core/providers/auth_provider.dart';
 import '../auth/login_screen.dart';
+import '../auth/reset_password_screen.dart';
 import '../profile/complete_profile_screen.dart';
 import '../shell/main_shell.dart';
 import '../splash/splash_screen.dart';
-import '../../core/providers/auth_provider.dart';
 
 class AppGate extends StatefulWidget {
   const AppGate({super.key});
@@ -17,10 +19,10 @@ class AppGate extends StatefulWidget {
 }
 
 class _AppGateState extends State<AppGate> {
-
   StreamSubscription<AuthState>? _subscription;
 
   bool _loading = true;
+  bool _isPasswordRecovery = false;
 
   Widget? _screen;
 
@@ -28,44 +30,101 @@ class _AppGateState extends State<AppGate> {
   void initState() {
     super.initState();
 
-    _checkUser();
+    _subscription = Supabase.instance.client.auth.onAuthStateChange.listen((
+      authState,
+    ) async {
+      if (authState.event == AuthChangeEvent.passwordRecovery) {
+        _showPasswordRecovery();
+        return;
+      }
 
-    _subscription = Supabase.instance.client.auth.onAuthStateChange.listen(
-      (_) {
-        _checkUser();
-      },
-    );
+      if (_isPasswordRecovery) {
+        return;
+      }
+
+      if (authState.event == AuthChangeEvent.signedOut) {
+        if (!mounted) return;
+
+        setState(() {
+          _loading = false;
+          _screen = const LoginScreen();
+        });
+
+        return;
+      }
+
+      await _checkUser();
+    });
+
+    _handleInitialUrl();
   }
 
-Future<void> _checkUser() async {
-  final auth = context.read<AuthProvider>();
+  void _showPasswordRecovery() {
+    _isPasswordRecovery = true;
 
-  final session = Supabase.instance.client.auth.currentSession;
-
-  if (session == null) {
     if (!mounted) return;
 
     setState(() {
       _loading = false;
-      _screen = const LoginScreen();
+      _screen = const ResetPasswordScreen();
     });
-
-    return;
   }
 
-  if (!auth.isProfileLoaded) {
-    await auth.refreshProfile();
+  Future<void> _handleInitialUrl() async {
+    final uri = Uri.base;
+
+    final code = uri.queryParameters['code'];
+
+    if (code != null && code.isNotEmpty) {
+      try {
+        await Supabase.instance.client.auth.exchangeCodeForSession(code);
+
+        _showPasswordRecovery();
+        return;
+      } catch (e) {
+        debugPrint('Password recovery code exchange failed: $e');
+      }
+    }
+
+    await _checkUser();
   }
 
-  if (!mounted) return;
+  Future<void> _checkUser() async {
+    if (_isPasswordRecovery) return;
 
-  setState(() {
-    _loading = false;
-    _screen = auth.profileCompleted
-        ? const MainShell()
-        : const CompleteProfileScreen();
-  });
-}
+    final auth = context.read<AuthProvider>();
+
+    if (auth.isPasswordRecovery) {
+      _showPasswordRecovery();
+      return;
+    }
+
+    final session = Supabase.instance.client.auth.currentSession;
+
+    if (session == null) {
+      if (!mounted) return;
+
+      setState(() {
+        _loading = false;
+        _screen = const LoginScreen();
+      });
+
+      return;
+    }
+
+    if (!auth.isProfileLoaded) {
+      await auth.refreshProfile();
+    }
+
+    if (!mounted || _isPasswordRecovery) return;
+
+    setState(() {
+      _loading = false;
+      _screen = auth.profileCompleted
+          ? const MainShell()
+          : const CompleteProfileScreen();
+    });
+  }
 
   @override
   void dispose() {
@@ -79,6 +138,6 @@ Future<void> _checkUser() async {
       return const SplashScreen();
     }
 
-    return _screen!;
+    return _screen ?? const LoginScreen();
   }
 }

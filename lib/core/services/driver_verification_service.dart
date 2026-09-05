@@ -1,12 +1,7 @@
 import '../api/api_client.dart';
 import '../../features/profile/models/driver_details.dart';
 
-enum DriverVerificationState {
-  notApplied,
-  pending,
-  verified,
-  rejected,
-}
+enum DriverVerificationState { notApplied, pending, verified, rejected }
 
 class DriverVerificationService {
   final ApiClient _api = ApiClient();
@@ -23,7 +18,7 @@ class DriverVerificationService {
         case 'pending':
           return DriverVerificationState.pending;
 
-        case 'verified':
+        case 'approved':
           return DriverVerificationState.verified;
 
         case 'rejected':

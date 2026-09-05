@@ -6,6 +6,7 @@ import '../../core/api/api_client.dart';
 import 'screens/verification_pending_screen.dart';
 import '../../core/widgets/upload_document_card.dart';
 import '../../core/services/driver_verification_service.dart';
+import 'screens/verification_success_screen.dart';
 
 class BecomeDriverScreen extends StatefulWidget {
   const BecomeDriverScreen({super.key});
@@ -45,8 +46,14 @@ class _BecomeDriverScreenState extends State<BecomeDriverScreen> {
         return;
 
       case DriverVerificationState.verified:
-        // We'll build this screen later.
-        break;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) =>
+                const VerificationSuccessScreen(verificationType: 'driver'),
+          ),
+        );
+        return;
 
       case DriverVerificationState.rejected:
       case DriverVerificationState.notApplied:

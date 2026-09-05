@@ -2,6 +2,9 @@ import express from 'express';
 
 import { requireAuth } from '../../middleware/auth.js';
 import { requireAdmin } from '../../middleware/admin.js';
+import {
+    createSignedStorageUrl,
+} from '../../services/storage.js';
 
 import {
     getVerificationRequests,
@@ -62,6 +65,116 @@ router.get('/requests', async (req, res) => {
             'Unable to fetch verification requests.',
             'VERIFICATION_FETCH_FAILED',
             500
+        );
+    }
+});
+router.get('/:id/document/:side', async (req, res) => {
+    try {
+        const { id, side } = req.params;
+
+        if (side !== 'front' && side !== 'back') {
+            return errorResponse(
+                res,
+                'Invalid document side.',
+                'INVALID_DOCUMENT_SIDE',
+                400,
+            );
+        }
+
+        const request = await getVerificationRequest(id);
+
+        if (!request) {
+            return errorResponse(
+                res,
+                'Verification request not found.',
+                'NOT_FOUND',
+                404,
+            );
+        }
+
+        let documentUrl;
+        let bucket;
+
+        if (request.verification_type === 'student') {
+            bucket = 'student-ids';
+
+            documentUrl =
+                side === 'front'
+                    ? request.id_card_front_url
+                    : request.id_card_back_url;
+        } else if (request.verification_type === 'driver') {
+            bucket = 'driver-licenses';
+
+            documentUrl =
+                side === 'front'
+                    ? request.license_front_url
+                    : request.license_back_url;
+        } else {
+            return errorResponse(
+                res,
+                'Unsupported verification type.',
+                'INVALID_VERIFICATION_TYPE',
+                400,
+            );
+        }
+
+        if (!documentUrl) {
+            return errorResponse(
+                res,
+                'Requested document is not available.',
+                'DOCUMENT_NOT_FOUND',
+                404,
+            );
+        }
+
+        let filePath = documentUrl;
+
+        // Driver documents may be stored as a public Supabase URL.
+        // Student documents are stored directly as storage paths.
+        if (documentUrl.startsWith('http')) {
+            const marker =
+                `/storage/v1/object/public/${bucket}/`;
+
+            const markerIndex = documentUrl.indexOf(marker);
+
+            if (markerIndex === -1) {
+                return errorResponse(
+                    res,
+                    'Stored document path is invalid.',
+                    'INVALID_DOCUMENT_PATH',
+                    500,
+                );
+            }
+
+            filePath = documentUrl.substring(
+                markerIndex + marker.length,
+            );
+        }
+
+        const signedUrl = await createSignedStorageUrl(
+            bucket,
+            filePath,
+            300,
+        );
+
+        return successResponse(
+            res,
+            {
+                url: signedUrl,
+                expiresIn: 300,
+                side,
+                verificationType: request.verification_type,
+            },
+            'Document URL generated successfully.',
+        );
+    } catch (err) {
+        console.error(err);
+
+        return errorResponse(
+            res,
+            'Unable to generate document URL.',
+            'DOCUMENT_URL_FAILED',
+            500,
         );
     }
 });

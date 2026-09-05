@@ -83,7 +83,8 @@ class ProfileScreen extends StatelessWidget {
                   const SizedBox(height: 8),
 
                   Text(
-                    "MGIT • ${auth.profile?['branch'] ?? ''}",
+                    "${auth.profile?['institution_name'] ?? ''} • "
+                    "${auth.profile?['branch'] ?? ''}",
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
 
@@ -206,6 +207,57 @@ class ProfileScreen extends StatelessWidget {
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute<void>(builder: (_) => const PaymentsScreen()),
             ),
+          ),
+          const SizedBox(height: 8),
+
+          _ProfileTile(
+            theme: theme,
+            icon: Icons.logout_rounded,
+            title: 'Logout',
+            subtitle: 'Sign out of your CPool account',
+            onTap: () async {
+              final shouldLogout = await showDialog<bool>(
+                context: context,
+                builder: (dialogContext) {
+                  return AlertDialog(
+                    title: const Text('Logout'),
+                    content: const Text(
+                      'Are you sure you want to logout of your CPool account?',
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () {
+                          Navigator.of(dialogContext).pop(false);
+                        },
+                        child: const Text('Cancel'),
+                      ),
+                      FilledButton(
+                        onPressed: () {
+                          Navigator.of(dialogContext).pop(true);
+                        },
+                        child: const Text('Logout'),
+                      ),
+                    ],
+                  );
+                },
+              );
+
+              if (shouldLogout != true || !context.mounted) {
+                return;
+              }
+
+              try {
+                await context.read<AuthProvider>().signOut();
+              } catch (e) {
+                if (!context.mounted) return;
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Unable to logout. Please try again.'),
+                  ),
+                );
+              }
+            },
           ),
         ],
       ),

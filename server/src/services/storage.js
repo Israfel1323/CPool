@@ -20,13 +20,14 @@ export async function uploadStudentId(
   originalName,
   mimeType,
   profileId,
+  side,
 ) {
   const extension =
     originalName.split('.').pop()?.toLowerCase() || 'jpg';
 
- const fileName = `current-id.${extension}`;
+  const fileName = `current-id-${side}.${extension}`;
 
-const filePath = `${profileId}/${fileName}`;
+  const filePath = `${profileId}/${fileName}`;
 
   const { error } = await supabase.storage
     .from('student-ids')
@@ -41,4 +42,35 @@ const filePath = `${profileId}/${fileName}`;
   }
 
   return filePath;
+}
+/**
+ * Create a temporary signed URL for a private storage object.
+ *
+ * @param {string} bucket
+ * @param {string} filePath
+ * @param {number} expiresIn
+ * @returns {Promise<string>}
+ */
+export async function createSignedStorageUrl(
+  bucket,
+  filePath,
+  expiresIn = 300,
+) {
+  const { data, error } = await supabase.storage
+    .from(bucket)
+    .createSignedUrl(filePath, expiresIn);
+
+  if (error) {
+    throw new Error(
+      `Unable to create signed URL: ${error.message}`,
+    );
+  }
+
+  if (!data?.signedUrl) {
+    throw new Error(
+      'Unable to create signed URL: no URL returned.',
+    );
+  }
+
+  return data.signedUrl;
 }
