@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../../../core/widgets/app_page_header.dart';
 import '../widgets/operation_card.dart';
 import 'verification_dashboard_page.dart';
+import 'customer_support_dashboard_page.dart';
+import 'sos_alerts_page.dart';
 
 class OperationsHomePage extends StatelessWidget {
   const OperationsHomePage({super.key});
@@ -39,16 +41,29 @@ class OperationsHomePage extends StatelessWidget {
                 icon: Icons.support_agent_rounded,
                 title: "Customer Support",
                 subtitle: "Handle support tickets.",
-                badge: "Soon",
-                onTap: () {},
+                badge: "Live",
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const CustomerSupportDashboardPage(),
+                    ),
+                  );
+                },
               ),
 
               OperationCard(
                 icon: Icons.security_rounded,
                 title: "Safety & Reports",
-                subtitle: "Investigate reports and incidents.",
-                badge: "Soon",
-                onTap: () {},
+                subtitle: "Review SOS alerts and safety incidents.",
+                
+                badge: "Live",
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const SosAlertsPage()),
+                  );
+                },
               ),
 
               OperationCard(

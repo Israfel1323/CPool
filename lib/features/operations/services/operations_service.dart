@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 
 import '../../../core/api/api_client.dart';
 import '../models/dashboard_stats.dart';
+import '../models/sos_alert.dart';
 import '../models/verification_request.dart';
 
 class OperationsService {
@@ -49,8 +50,8 @@ class OperationsService {
         'page': page,
         'limit': limit,
         'status': status,
-        if (type != null) 'type': type,
-        if (search.trim().isNotEmpty) 'search': search.trim(),
+        'type': ?type,
+        'search': ?search.trim(),
       },
     );
 
@@ -152,5 +153,68 @@ class OperationsService {
     }
 
     return VerificationRequest.fromJson(json['data'] as Map<String, dynamic>);
+  }
+  // ============================================================
+  // SOS ALERTS — LIST
+  // ============================================================
+
+  Future<List<SosAlert>> getSosAlerts({
+    int page = 1,
+    int limit = 20,
+    String status = 'active',
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      '/operations/sos/alerts',
+      queryParameters: {'page': page, 'limit': limit, 'status': status},
+    );
+
+    final json = response.data;
+
+    if (json == null || json['data'] == null) {
+      throw Exception('SOS alerts response is empty.');
+    }
+
+    final data = json['data'] as Map<String, dynamic>;
+    final items = data['items'] as List<dynamic>? ?? [];
+
+    return items
+        .map((item) => SosAlert.fromJson(item as Map<String, dynamic>))
+        .toList();
+  }
+
+  // ============================================================
+  // SOS ALERT — DETAILS
+  // ============================================================
+
+  Future<SosAlert> getSosAlert(String alertId) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      '/operations/sos/alerts/$alertId',
+    );
+
+    final json = response.data;
+
+    if (json == null || json['data'] == null) {
+      throw Exception('SOS alert response is empty.');
+    }
+
+    return SosAlert.fromJson(json['data'] as Map<String, dynamic>);
+  }
+
+  // ============================================================
+  // SOS ALERT — RESOLVE
+  // ============================================================
+
+  Future<SosAlert> resolveSosAlert(String alertId) async {
+    final response = await _dio.put<Map<String, dynamic>>(
+      '/operations/sos/alerts/$alertId/resolve',
+    );
+
+    final json = response.data;
+
+    if (json == null || json['data'] == null) {
+      throw Exception('SOS resolve response is empty.');
+    }
+
+    return SosAlert.fromJson(json['data'] as Map<String, dynamic>);
   }
 }

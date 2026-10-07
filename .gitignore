@@ -47,3 +47,5 @@ coverage/
 # =========================
 *.tmp
 *.bak
+
+server/src/node_modules/

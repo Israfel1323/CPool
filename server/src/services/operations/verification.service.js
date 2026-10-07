@@ -249,7 +249,43 @@ export async function updateVerificationStatusWithAudit({
         [verification.profile_id]
       );
     }
-
+    /*
+     * When a driver is approved, make sure their original
+     * verified vehicle exists in the vehicles table.
+     *
+     * Additional vehicles do not require verification.
+     */
+    if (
+      verification.verification_type === 'driver' &&
+      status === 'approved'
+    ) {
+      await client.query(
+        `
+        INSERT INTO vehicles (
+          user_id,
+          vehicle_type,
+          vehicle_name,
+          vehicle_number,
+          vehicle_color,
+          created_at,
+          updated_at
+        )
+        SELECT
+          user_id,
+          vehicle_type,
+          vehicle_name,
+          vehicle_number,
+          vehicle_color,
+          created_at,
+          NOW()
+        FROM driver_details
+        WHERE user_id = $1
+        ON CONFLICT (vehicle_number)
+        DO NOTHING;
+        `,
+        [verification.profile_id]
+      );
+    }
     // Keep the user's driver verification status in sync
     // with the verification request.
     if (verification.verification_type === 'driver') {

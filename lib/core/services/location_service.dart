@@ -39,8 +39,7 @@ class LocationService {
       );
 
       return GeocodeResult.fromJson(response);
-    } catch (e) {
-      print(e);
+    } catch (_) {
       return null;
     }
   }

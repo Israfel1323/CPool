@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:dio/dio.dart';
 import '../../core/api/api_client.dart';
 import '../../core/config/app_config.dart';
 import '../../core/models/commute.dart';
@@ -10,8 +9,6 @@ import '../../core/models/geocode_result.dart';
 import '../../core/theme/app_theme.dart';
 import '../commutes/offer_ride_screen.dart';
 import '../shell/main_shell.dart';
-import 'package:geolocator/geolocator.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'widgets/location_card.dart';
 import 'widgets/search_button.dart';
 import 'widgets/search_filters.dart';
@@ -30,7 +27,6 @@ class _SearchScreenState extends State<SearchScreen> {
   final _toCtrl = TextEditingController();
   final _api = ApiClient();
   final _mapController = MapController();
-  Position? _currentPosition;
   bool _loadingLocation = true;
 
   GeocodeResult? _from;
@@ -41,9 +37,12 @@ class _SearchScreenState extends State<SearchScreen> {
   bool _loadingCommutes = false;
   String? _error;
   Timer? _debounce;
+  int _geocodeRequest = 0;
   _ActiveField? _activeField;
   bool _womenOnly = false;
   bool _bikeRide = false;
+
+  DateTime? _departureAt;
   @override
   void initState() {
     super.initState();
@@ -80,7 +79,6 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   void _onSearchChanged(String query, _ActiveField field) {
-    debugPrint('onSearchChanged: $query');
     _debounce?.cancel();
 
     _debounce = Timer(const Duration(milliseconds: 400), () {
@@ -89,9 +87,13 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   Future<void> _geocode(String query, _ActiveField field) async {
-    debugPrint('geocode called: $query');
+    final request = ++_geocodeRequest;
+
     if (query.trim().length < 2) {
-      setState(() => _suggestions = []);
+      setState(() {
+        _suggestions = [];
+        _searchingGeo = false;
+      });
       return;
     }
     setState(() {
@@ -107,21 +109,35 @@ class _SearchScreenState extends State<SearchScreen> {
         });
         return;
       }
-      debugPrint('calling API for: $query');
       final raw = await _api.searchGeocode(query);
+
+      // A slower response from an earlier field/query must not replace the
+      // choices for the field the rider is editing now.
+      if (!mounted || request != _geocodeRequest || _activeField != field) {
+        return;
+      }
+
       setState(() {
         _suggestions = raw
             .map((e) => GeocodeResult.fromJson(e as Map<String, dynamic>))
             .toList();
       });
     } catch (e) {
+      if (!mounted || request != _geocodeRequest || _activeField != field) {
+        return;
+      }
       setState(() => _error = e.toString());
     } finally {
-      if (mounted) setState(() => _searchingGeo = false);
+      if (mounted && request == _geocodeRequest) {
+        setState(() => _searchingGeo = false);
+      }
     }
   }
 
   void _selectPlace(GeocodeResult place) {
+    // Invalidate requests that were started before the rider made a choice.
+    _geocodeRequest++;
+
     final field = _activeField;
     if (field == _ActiveField.from) {
       _from = place;
@@ -186,7 +202,54 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
-  Future<void> _searchCommutes() async {
+  Future<void> _pickDepartureTime() async {
+    final now = DateTime.now();
+
+    final initialDate = _departureAt != null && _departureAt!.isAfter(now)
+        ? _departureAt!
+        : now;
+
+    final pickedDate = await showDatePicker(
+      context: context,
+      firstDate: DateTime(now.year, now.month, now.day),
+      lastDate: DateTime(now.year, now.month, now.day + 30),
+      initialDate: DateTime(
+        initialDate.year,
+        initialDate.month,
+        initialDate.day,
+      ),
+    );
+
+    if (!mounted || pickedDate == null) return;
+
+    final pickedTime = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(initialDate),
+    );
+
+    if (!mounted || pickedTime == null) return;
+
+    final departure = DateTime(
+      pickedDate.year,
+      pickedDate.month,
+      pickedDate.day,
+      pickedTime.hour,
+      pickedTime.minute,
+    );
+
+    if (!departure.isAfter(now)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please choose a future departure time.')),
+      );
+      return;
+    }
+
+    setState(() {
+      _departureAt = departure;
+    });
+  }
+
+  Future<bool> _searchCommutes() async {
     setState(() {
       _loadingCommutes = true;
       _error = null;
@@ -194,13 +257,13 @@ class _SearchScreenState extends State<SearchScreen> {
     try {
       if (!AppConfig.hasApi) {
         setState(() => _error = 'API not configured');
-        return;
+        return false;
       }
       if (_from == null || _to == null) {
         setState(() {
           _error = 'Please select both locations';
         });
-        return;
+        return false;
       }
 
       final raw = await _api.listCommutes(
@@ -210,14 +273,17 @@ class _SearchScreenState extends State<SearchScreen> {
         toLng: _to!.lon,
         poolType: _bikeRide ? 'bikepool' : 'carpool',
         womenOnly: _womenOnly,
+        departureAt: _departureAt,
       );
       setState(() {
         _commutes = raw
             .map((e) => Commute.fromJson(e as Map<String, dynamic>))
             .toList();
       });
+      return true;
     } catch (e) {
       setState(() => _error = e.toString());
+      return false;
     } finally {
       if (mounted) setState(() => _loadingCommutes = false);
     }
@@ -227,10 +293,6 @@ class _SearchScreenState extends State<SearchScreen> {
     if (_from != null) return LatLng(_from!.lat, _from!.lon);
 
     if (_to != null) return LatLng(_to!.lat, _to!.lon);
-
-    if (_currentPosition != null) {
-      return LatLng(_currentPosition!.latitude, _currentPosition!.longitude);
-    }
 
     return const LatLng(17.4375, 78.4482);
   }
@@ -303,11 +365,9 @@ class _SearchScreenState extends State<SearchScreen> {
                       TextField(
                         controller: _toCtrl,
                         onTap: () {
-                          debugPrint("TO TAP");
                           setState(() => _activeField = _ActiveField.to);
                         },
                         onChanged: (value) {
-                          debugPrint("TO CHANGED: $value");
                           _onSearchChanged(value, _ActiveField.to);
                         },
                         decoration: const InputDecoration(
@@ -324,7 +384,50 @@ class _SearchScreenState extends State<SearchScreen> {
                     _buildSuggestions(),
 
                   const SizedBox(height: 20),
+                  Text(
+                    'Departure',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
 
+                  const SizedBox(height: 8),
+
+                  InkWell(
+                    onTap: _pickDepartureTime,
+                    borderRadius: BorderRadius.circular(12),
+                    child: InputDecorator(
+                      decoration: const InputDecoration(
+                        labelText: 'Departure time',
+                        prefixIcon: Icon(Icons.schedule_rounded),
+                        border: OutlineInputBorder(),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              _departureAt == null
+                                  ? 'Any time'
+                                  : '${MaterialLocalizations.of(context).formatMediumDate(_departureAt!)} • '
+                                        '${TimeOfDay.fromDateTime(_departureAt!).format(context)}',
+                            ),
+                          ),
+                          if (_departureAt != null)
+                            IconButton(
+                              tooltip: 'Clear departure time',
+                              icon: const Icon(Icons.clear_rounded),
+                              onPressed: () {
+                                setState(() {
+                                  _departureAt = null;
+                                });
+                              },
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
                   SearchFilters(
                     womenOnly: _womenOnly,
                     bikeRide: _bikeRide,
@@ -364,9 +467,9 @@ class _SearchScreenState extends State<SearchScreen> {
                         return;
                       }
 
-                      await _searchCommutes();
+                      final searchCompleted = await _searchCommutes();
 
-                      if (!mounted) return;
+                      if (!mounted || !searchCompleted) return;
 
                       final booked = await Navigator.push<bool>(
                         context,
@@ -407,25 +510,6 @@ class _SearchScreenState extends State<SearchScreen> {
                             'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                         userAgentPackageName: 'com.cpool.cpool_app',
                       ),
-                      if (_currentPosition != null)
-                        MarkerLayer(
-                          markers: [
-                            Marker(
-                              point: LatLng(
-                                _currentPosition!.latitude,
-                                _currentPosition!.longitude,
-                              ),
-                              width: 40,
-                              height: 40,
-                              child: const Icon(
-                                Icons.my_location,
-                                color: Colors.blue,
-                                size: 32,
-                              ),
-                            ),
-                          ],
-                        ),
-
                       if (_from != null)
                         MarkerLayer(
                           markers: [

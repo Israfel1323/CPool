@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
-import '../../core/api/api_client.dart';
 import '../../core/config/app_config.dart';
 import '../../core/models/geocode_result.dart';
 import '../../core/providers/auth_provider.dart';
 import '../search/widgets/location_card.dart';
 import '../../core/services/location_service.dart';
+import '../profile/models/vehicle.dart';
 import 'dart:async';
+import '../../core/api/api_client.dart';
 
 class OfferRideScreen extends StatefulWidget {
   const OfferRideScreen({super.key, this.from, this.to});
@@ -40,10 +41,16 @@ class _OfferRideScreenState extends State<OfferRideScreen> {
   int _costRupees = 50;
   DateTime _departure = DateTime.now().add(const Duration(hours: 2));
   bool _loading = false;
+
+  List<Vehicle> _vehicles = [];
+  Vehicle? _selectedVehicle;
+  bool _loadingVehicles = false;
+
   @override
   void initState() {
     super.initState();
     _loadCurrentLocation();
+    _loadVehicles();
   }
 
   Future<void> _loadCurrentLocation() async {
@@ -55,6 +62,55 @@ class _OfferRideScreenState extends State<OfferRideScreen> {
       _from = place;
       _fromCtrl.text = place.displayName;
     });
+  }
+
+  Future<void> _loadVehicles() async {
+    if (!mounted) return;
+
+    setState(() => _loadingVehicles = true);
+
+    try {
+      final vehicles = await _api.getVehicles();
+
+      if (!mounted) return;
+
+      setState(() {
+        _vehicles = vehicles;
+        _updateSelectedVehicle();
+      });
+    } catch (e) {
+      debugPrint('Failed to load vehicles: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _loadingVehicles = false);
+      }
+    }
+  }
+
+  void _updateSelectedVehicle() {
+    final matchingVehicles = _vehicles
+        .where(
+          (vehicle) =>
+              (_poolType == 'carpool' && vehicle.vehicleType == 'car') ||
+              (_poolType == 'bikepool' && vehicle.vehicleType == 'bike'),
+        )
+        .toList();
+
+    if (matchingVehicles.isEmpty) {
+      _selectedVehicle = null;
+      return;
+    }
+
+    if (_selectedVehicle != null &&
+        matchingVehicles.any((v) => v.id == _selectedVehicle!.id)) {
+      return;
+    }
+
+    if (matchingVehicles.length == 1) {
+      _selectedVehicle = matchingVehicles.first;
+    } else {
+      _selectedVehicle = null;
+    }
   }
 
   void _onSearchChanged(String query, _ActiveField field) {
@@ -128,6 +184,13 @@ class _OfferRideScreenState extends State<OfferRideScreen> {
       return;
     }
 
+    if (_selectedVehicle == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a vehicle for this ride')),
+      );
+      return;
+    }
+
     setState(() => _loading = true);
     try {
       await _api.createCommute({
@@ -142,6 +205,7 @@ class _OfferRideScreenState extends State<OfferRideScreen> {
         'seats_total': _seats,
         'cost_per_seat_paise': _costRupees * 100,
         'departure_at': _departure.toUtc().toIso8601String(),
+        'vehicle_id': _selectedVehicle!.id,
       });
       if (!mounted) return;
 
@@ -159,6 +223,107 @@ class _OfferRideScreenState extends State<OfferRideScreen> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  Widget _buildVehicleSelector() {
+    if (_loadingVehicles) {
+      return const Card(
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: Row(
+            children: [
+              SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              SizedBox(width: 12),
+              Text('Loading vehicles...'),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final matchingVehicles = _vehicles
+        .where(
+          (vehicle) =>
+              (_poolType == 'carpool' && vehicle.vehicleType == 'car') ||
+              (_poolType == 'bikepool' && vehicle.vehicleType == 'bike'),
+        )
+        .toList();
+
+    if (matchingVehicles.isEmpty) {
+      return Card(
+        child: ListTile(
+          leading: Icon(
+            _poolType == 'bikepool'
+                ? Icons.two_wheeler
+                : Icons.directions_car_outlined,
+          ),
+          title: const Text('No suitable vehicle'),
+          subtitle: Text(
+            _poolType == 'carpool'
+                ? 'Add a car in My Vehicles before offering a CarPool ride.'
+                : 'Add a bike in My Vehicles before offering a BikePool ride.',
+          ),
+        ),
+      );
+    }
+
+    if (matchingVehicles.length == 1) {
+      final vehicle = matchingVehicles.first;
+
+      return Card(
+        child: ListTile(
+          leading: Icon(
+            vehicle.vehicleType == 'bike'
+                ? Icons.two_wheeler
+                : Icons.directions_car,
+          ),
+          title: Text(vehicle.vehicleName),
+          subtitle: Text(
+            '${vehicle.vehicleNumber}'
+            '${vehicle.vehicleColor != null && vehicle.vehicleColor!.trim().isNotEmpty ? ' • ${vehicle.vehicleColor}' : ''}',
+          ),
+          trailing: const Icon(Icons.check_circle_outline),
+        ),
+      );
+    }
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: DropdownButtonFormField<String>(
+          initialValue: _selectedVehicle?.id,
+          decoration: const InputDecoration(
+            labelText: 'Vehicle',
+            prefixIcon: Icon(Icons.directions_car_outlined),
+          ),
+          items: matchingVehicles.map((vehicle) {
+            final color = vehicle.vehicleColor?.trim();
+
+            return DropdownMenuItem<String>(
+              value: vehicle.id,
+              child: Text(
+                '${vehicle.vehicleName} • ${vehicle.vehicleNumber}'
+                '${color != null && color.isNotEmpty ? ' • $color' : ''}',
+                overflow: TextOverflow.ellipsis,
+              ),
+            );
+          }).toList(),
+          onChanged: (id) {
+            if (id == null) return;
+
+            setState(() {
+              _selectedVehicle = matchingVehicles.firstWhere(
+                (vehicle) => vehicle.id == id,
+              );
+            });
+          },
+        ),
+      ),
+    );
   }
 
   Widget _buildSuggestions() {
@@ -271,9 +436,18 @@ class _OfferRideScreenState extends State<OfferRideScreen> {
                 if (_poolType == 'carpool' && _seats == 1) {
                   _seats = 3;
                 }
+
+                _updateSelectedVehicle();
               });
             },
           ),
+
+          const SizedBox(height: 16),
+
+          _buildVehicleSelector(),
+
+          const SizedBox(height: 8),
+
           SwitchListTile(
             title: const Text('Women only'),
             value: _womenOnly,

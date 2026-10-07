@@ -41,6 +41,8 @@ class AuthProvider extends ChangeNotifier {
   String? _syncError;
   Map<String, dynamic>? _profile;
   bool _isPasswordRecovery = false;
+  bool? _isNewProfile;
+  Future<void>? _syncFuture;
 
   String? get syncError => _syncError;
   Map<String, dynamic>? get profile => _profile;
@@ -139,15 +141,31 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> _syncProfile() async {
+  Future<void> _syncProfile() {
+    if (_syncFuture != null) {
+      return _syncFuture!;
+    }
+
+    final future = _performSyncProfile();
+    _syncFuture = future;
+
+    return future.whenComplete(() {
+      _syncFuture = null;
+    });
+  }
+
+  Future<void> _performSyncProfile() async {
     if (!isSignedIn || !AppConfig.hasApi) return;
+
     try {
       final data = await _api.syncProfile();
       _profile = data['profile'] as Map<String, dynamic>?;
+      _isNewProfile = data['isNewProfile'] == true;
       _syncError = null;
     } catch (e) {
       _syncError = e.toString();
     }
+
     notifyListeners();
   }
 
@@ -162,6 +180,12 @@ class AuthProvider extends ChangeNotifier {
     }
     notifyListeners();
   }
+
+  Future<void> syncProfile() async {
+    await _syncProfile();
+  }
+
+  bool? get isNewProfile => _isNewProfile;
 
   bool get profileCompleted =>
       (_profile?['profile_completed'] ?? false) == true;

@@ -175,7 +175,7 @@ class _BecomeDriverScreenState extends State<BecomeDriverScreen> {
                   "Provide your vehicle details and upload your driving license for verification.",
                 ),
                 const Text(
-                  "🚘 Vehicle Details",
+                  "Vehicle Details",
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
 
@@ -273,7 +273,7 @@ class _BecomeDriverScreenState extends State<BecomeDriverScreen> {
                 const SizedBox(height: 24),
 
                 const Text(
-                  "🪪 Driver License",
+                  "Driver License",
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
 

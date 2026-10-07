@@ -54,7 +54,7 @@ Widget build(BuildContext context) {
                   email,
                   textAlign: TextAlign.center,
                   style: const TextStyle(
-                    color: Colors.deepPurple,
+                    color: Color(0xFF705A8B),
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
                   ),

@@ -2,13 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'verification_screen.dart';
 import '../../core/providers/auth_provider.dart';
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
-import '../../widgets/theme_toggle.dart';
 import '../payments/payments_screen.dart';
 import '../shell/main_shell.dart';
 import 'complete_profile_screen.dart';
 import 'become_driver_screen.dart';
+import '../support/customer_support_screen.dart';
+import 'ratings_screen.dart';
+import '../rides/my_rides_screen.dart';
+import 'my_vehicles_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -83,8 +85,7 @@ class ProfileScreen extends StatelessWidget {
                   const SizedBox(height: 8),
 
                   Text(
-                    "${auth.profile?['institution_name'] ?? ''} • "
-                    "${auth.profile?['branch'] ?? ''}",
+                    "MGIT • ${auth.profile?['branch'] ?? ''}",
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
 
@@ -120,7 +121,7 @@ class ProfileScreen extends StatelessWidget {
           _SectionHeader(title: 'Appearance'),
           const SizedBox(height: 8),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
               color: theme.card,
               borderRadius: BorderRadius.circular(16),
@@ -129,12 +130,8 @@ class ProfileScreen extends StatelessWidget {
             child: Row(
               children: [
                 Icon(
-                  theme.isDark
-                      ? Icons.nightlight_round
-                      : Icons.wb_sunny_rounded,
-                  color: theme.isDark
-                      ? AppColors.violet400
-                      : const Color(0xFFF59E0B),
+                  Icons.palette_outlined,
+                  color: theme.accent,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -146,15 +143,12 @@ class ProfileScreen extends StatelessWidget {
                         style: Theme.of(context).textTheme.labelLarge,
                       ),
                       Text(
-                        theme.isDark
-                            ? 'Night — black, grey & violet'
-                            : 'Day — light violet & grey',
+                        'CPool Light',
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
                     ],
                   ),
                 ),
-                const ThemeToggle(),
               ],
             ),
           ),
@@ -186,6 +180,18 @@ class ProfileScreen extends StatelessWidget {
               );
             },
           ),
+          _ProfileTile(
+            theme: theme,
+            icon: Icons.directions_car_outlined,
+            title: 'My Vehicles',
+            subtitle: 'Add, edit or manage your vehicles',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const MyVehiclesScreen()),
+              );
+            },
+          ),
           const SizedBox(height: 32),
           _SectionHeader(title: 'Account'),
           const SizedBox(height: 8),
@@ -193,11 +199,36 @@ class ProfileScreen extends StatelessWidget {
             theme: theme,
             icon: Icons.history_rounded,
             title: 'Ride history',
+            subtitle: 'View your created, booked and completed rides',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const MyRidesScreen()),
+              );
+            },
           ),
           _ProfileTile(
             theme: theme,
             icon: Icons.star_outline_rounded,
             title: 'Ratings',
+            subtitle: 'View your ratings and feedback',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const RatingsScreen()),
+              );
+            },
+          ),
+          _ProfileTile(
+            theme: theme,
+            icon: Icons.support_agent_rounded,
+            title: 'Customer Support',
+            subtitle: 'Get help or raise a support ticket',
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const CustomerSupportScreen(),
+              ),
+            ),
           ),
           _ProfileTile(
             theme: theme,

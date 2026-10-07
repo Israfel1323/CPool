@@ -12,11 +12,16 @@ import paymentsRouter from './routes/payments.js';
 import chatRouter from './routes/chat.js';
 import driverDetailsRouter from './routes/driver-details.js';
 import operationsRouter from './routes/operations/index.js';
+import supportRouter from './routes/support.js';
+import emergencyContactsRouter from './routes/emergency-contacts.js';
+import tripSafetyRouter from './routes/trip-safety.js';
+import vehiclesRouter from './routes/vehicles.js';
 
 const app = express();
 const port = Number(process.env.PORT) || 3000;
 
-const corsOrigins = process.env.CORS_ORIGINS?.split(',').map((s) => s.trim()) ?? ['*'];
+const corsOrigins =
+  process.env.CORS_ORIGINS?.split(',').map((s) => s.trim()) ?? ['*'];
 
 app.use(helmet());
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
@@ -40,6 +45,7 @@ app.get('/', (_req, res) => {
       payments: 'POST /payments/orders',
       chat: 'GET|POST /chat/:commuteId',
       verification: 'POST /verification/upload',
+      support: 'GET|POST /support/tickets',
     },
   });
 });
@@ -53,7 +59,10 @@ app.use('/chat', chatRouter);
 app.use('/verification', verificationRouter);
 app.use('/driver-details', driverDetailsRouter);
 app.use('/operations', operationsRouter);
-
+app.use('/support', supportRouter);
+app.use('/emergency-contacts', emergencyContactsRouter);
+app.use('/trip-safety', tripSafetyRouter);
+app.use('/vehicles', vehiclesRouter);
 
 app.use((err, _req, res, _next) => {
   console.error(err);

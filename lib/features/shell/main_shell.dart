@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/theme/app_theme.dart';
-import '../../widgets/theme_toggle.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/api/api_client.dart';
 
@@ -23,8 +22,8 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
   int _currentIndex = 0;
 
-  bool _hasActiveRide = false;
   bool _checkingActiveRide = true;
+  bool _hasActiveRide = false;
 
   Map<String, dynamic>? _activeRide;
   bool _activeRideIsDriver = false;
@@ -71,14 +70,30 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
 
       final hasActiveRide = result['active'] == true;
 
-      final nextRide = hasActiveRide
-          ? Map<String, dynamic>.from(result['commute'])
-          : null;
+      Map<String, dynamic>? nextRide;
+      bool nextIsDriver = _activeRideIsDriver;
 
-      final nextIsDriver = hasActiveRide && result['is_driver'] == true;
+      if (hasActiveRide) {
+        nextRide = Map<String, dynamic>.from(result['commute']);
+        nextIsDriver = result['is_driver'] == true;
+      } else if (_activeRide != null) {
+        // IMPORTANT:
+        // Keep the existing RideDetailsScreen mounted when the backend
+        // stops reporting the ride as active.
+        //
+        // This is necessary because a completed ride is intentionally
+        // removed from /commutes/active, but RideDetailsScreen still needs
+        // to remain alive long enough to show payment/rating/thank-you.
+        //
+        // The existing onRideEnded callback will clear this ride after
+        // the post-ride flow is finished.
+        nextRide = _activeRide;
+      }
+
+      final effectiveHasRide = nextRide != null;
 
       final rideChanged =
-          _hasActiveRide != hasActiveRide ||
+          _hasActiveRide != effectiveHasRide ||
           _activeRide?['id'] != nextRide?['id'] ||
           _activeRide?['status'] != nextRide?['status'] ||
           _activeRideIsDriver != nextIsDriver;
@@ -86,7 +101,7 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
       if (!rideChanged && !_checkingActiveRide) return;
 
       setState(() {
-        _hasActiveRide = hasActiveRide;
+        _hasActiveRide = effectiveHasRide;
         _activeRide = nextRide;
         _activeRideIsDriver = nextIsDriver;
         _checkingActiveRide = false;
@@ -102,6 +117,19 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
     }
   }
 
+  Future<void> _clearCompletedRide() async {
+    if (!mounted) return;
+
+    setState(() {
+      _hasActiveRide = false;
+      _activeRide = null;
+      _activeRideIsDriver = false;
+    });
+
+    // Sync with backend after the UI has been cleared.
+    await _checkActiveRide();
+  }
+
   void _onTabSelected(int index) {
     if (_currentIndex == index) return;
 
@@ -112,6 +140,7 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     final theme = context.cpoolTheme;
     final auth = context.watch<AuthProvider>();
+
     if (_checkingActiveRide) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
@@ -131,7 +160,7 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
       HomeScreen(
         activeRide: _activeRide,
         activeRideIsDriver: _activeRideIsDriver,
-        onRideEnded: _checkActiveRide,
+        onRideEnded: _clearCompletedRide,
         onRideChanged: _checkActiveRide,
       ),
       const MyRidesScreen(),
@@ -149,6 +178,7 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
             begin: const Offset(0.03, 0),
             end: Offset.zero,
           ).animate(animation);
+
           return FadeTransition(
             opacity: animation,
             child: SlideTransition(position: slide, child: child),
@@ -204,7 +234,7 @@ class CPoolAppBar extends StatelessWidget implements PreferredSizeWidget {
   const CPoolAppBar({
     super.key,
     required this.title,
-    this.showThemeToggle = true,
+    this.showThemeToggle = false,
     this.actions,
   });
 
@@ -219,13 +249,7 @@ class CPoolAppBar extends StatelessWidget implements PreferredSizeWidget {
   Widget build(BuildContext context) {
     return AppBar(
       title: Text(title),
-      actions: [
-        ...?actions,
-        if (showThemeToggle) ...[
-          const ThemeToggle(compact: true),
-          const SizedBox(width: 12),
-        ],
-      ],
+      actions: actions,
     );
   }
 }

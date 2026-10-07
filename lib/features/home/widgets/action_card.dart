@@ -12,6 +12,7 @@ class ActionCard extends StatefulWidget {
     required this.title,
     required this.subtitle,
     this.iconBackgroundColor,
+    this.prominent = false,
     this.onTap,
   });
 
@@ -19,6 +20,7 @@ class ActionCard extends StatefulWidget {
   final String title;
   final String subtitle;
   final Color? iconBackgroundColor;
+  final bool prominent;
   final VoidCallback? onTap;
 
   @override
@@ -32,6 +34,12 @@ class _ActionCardState extends State<ActionCard> {
   Widget build(BuildContext context) {
     final accent =
         widget.iconBackgroundColor ?? Theme.of(context).colorScheme.primary;
+    final theme = Theme.of(context);
+    final foreground =
+        widget.prominent ? Colors.white : theme.colorScheme.onSurface;
+    final secondaryForeground = widget.prominent
+        ? Colors.white.withValues(alpha: 0.78)
+        : theme.colorScheme.onSurfaceVariant;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.md),
@@ -51,11 +59,15 @@ class _ActionCardState extends State<ActionCard> {
 
               overlayColor: WidgetStateProperty.resolveWith<Color?>((states) {
                 if (states.contains(WidgetState.pressed)) {
-                  return Colors.white.withOpacity(0.08);
+                  return widget.prominent
+                      ? Colors.white.withValues(alpha: 0.08)
+                      : accent.withValues(alpha: 0.08);
                 }
 
                 if (states.contains(WidgetState.hovered)) {
-                  return Colors.white.withOpacity(0.04);
+                  return widget.prominent
+                      ? Colors.white.withValues(alpha: 0.04)
+                      : accent.withValues(alpha: 0.04);
                 }
 
                 return null;
@@ -77,37 +89,49 @@ class _ActionCardState extends State<ActionCard> {
               child: Ink(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(AppRadius.large),
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      accent,
-                      Color.lerp(accent, Colors.black, 0.28)!,
-                    ],
-                  ),
-                  boxShadow: AppShadow.elevated,
+                  color: widget.prominent ? null : theme.colorScheme.surface,
+                  gradient: widget.prominent
+                      ? LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            accent,
+                            Color.lerp(accent, Colors.black, 0.22)!,
+                          ],
+                        )
+                      : null,
+                  border: widget.prominent
+                      ? null
+                      : Border.all(color: accent.withValues(alpha: 0.28)),
+                  boxShadow: widget.prominent
+                      ? AppShadow.elevated
+                      : AppShadow.card,
                 ),
                 padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.lg,
-                  vertical: AppSpacing.lg,
+                  horizontal: AppSpacing.md,
+                  vertical: AppSpacing.md,
                 ),
                 child: Row(
                   children: [
                     Container(
-                      width: 64,
-                      height: 64,
+                      width: 52,
+                      height: 52,
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.10),
+                        color: widget.prominent
+                            ? Colors.white.withValues(alpha: 0.12)
+                            : accent.withValues(alpha: 0.12),
                         borderRadius:
                             BorderRadius.circular(AppRadius.button),
                         border: Border.all(
-                          color: Colors.white.withOpacity(0.08),
+                          color: widget.prominent
+                              ? Colors.white.withValues(alpha: 0.08)
+                              : accent.withValues(alpha: 0.16),
                         ),
                       ),
                       child: Icon(
                         widget.icon,
-                        color: Colors.white,
-                        size: AppSize.iconLg,
+                        color: widget.prominent ? Colors.white : accent,
+                        size: AppSize.iconMd,
                       ),
                     ),
 
@@ -119,9 +143,9 @@ class _ActionCardState extends State<ActionCard> {
                         children: [
                           Text(
                             widget.title,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 28,
+                            style: TextStyle(
+                              color: foreground,
+                              fontSize: 20,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
@@ -130,14 +154,23 @@ class _ActionCardState extends State<ActionCard> {
 
                           Text(
                             widget.subtitle,
-                            style: const TextStyle(
-                              color: Colors.white70,
-                              fontSize: 16,
+                            style: TextStyle(
+                              color: secondaryForeground,
+                              fontSize: 14,
                               height: 1.4,
                             ),
                           ),
                         ],
                       ),
+                    ),
+
+                    const SizedBox(width: AppSpacing.sm),
+
+                    Icon(
+                      Icons.arrow_forward_rounded,
+                      color: widget.prominent
+                          ? Colors.white.withValues(alpha: 0.92)
+                          : accent,
                     ),
                   ],
                 ),

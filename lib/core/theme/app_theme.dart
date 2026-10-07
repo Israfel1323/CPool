@@ -5,95 +5,11 @@ import 'package:google_fonts/google_fonts.dart';
 import 'app_colors.dart';
 
 abstract final class AppTheme {
-  static ThemeData dark() {
-    const primary = AppColors.violet500;
-    const secondary = AppColors.violet700;
-
-    return ThemeData(
-      useMaterial3: true,
-      brightness: Brightness.dark,
-      scaffoldBackgroundColor: AppColors.darkBg,
-      colorScheme: const ColorScheme.dark(
-        primary: primary,
-        onPrimary: Colors.white,
-        secondary: secondary,
-        onSecondary: Colors.white,
-        surface: AppColors.darkSurface,
-        onSurface: AppColors.darkText,
-        error: AppColors.error,
-        onError: Colors.white,
-      ),
-      appBarTheme: AppBarTheme(
-        elevation: 0,
-        centerTitle: true,
-        backgroundColor: AppColors.darkBg,
-        foregroundColor: AppColors.darkText,
-        systemOverlayStyle: SystemUiOverlayStyle.light,
-        titleTextStyle: GoogleFonts.inter(
-          fontSize: 18,
-          fontWeight: FontWeight.w600,
-          color: AppColors.darkText,
-        ),
-      ),
-      cardTheme: CardThemeData(
-        color: AppColors.darkCard,
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: AppColors.darkBorder),
-        ),
-      ),
-      navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: AppColors.darkSurface,
-        indicatorColor: AppColors.violet600.withValues(alpha: 0.35),
-        labelTextStyle: WidgetStateProperty.resolveWith((states) {
-          final selected = states.contains(WidgetState.selected);
-          return GoogleFonts.inter(
-            fontSize: 11,
-            fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-            color: selected ? AppColors.violet400 : AppColors.darkGreyMuted,
-          );
-        }),
-        iconTheme: WidgetStateProperty.resolveWith((states) {
-          final selected = states.contains(WidgetState.selected);
-          return IconThemeData(
-            color: selected ? AppColors.violet400 : AppColors.darkGrey,
-            size: 24,
-          );
-        }),
-      ),
-      floatingActionButtonTheme: const FloatingActionButtonThemeData(
-        backgroundColor: AppColors.violet600,
-        foregroundColor: Colors.white,
-        elevation: 4,
-      ),
-      dividerTheme: const DividerThemeData(color: AppColors.darkBorder),
-      inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: AppColors.darkElevated,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.darkBorder),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.darkBorder),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.violet500, width: 1.5),
-        ),
-        hintStyle: GoogleFonts.inter(color: AppColors.darkGreyMuted),
-        labelStyle: GoogleFonts.inter(color: AppColors.darkGreyMuted),
-      ),
-      textTheme: _textTheme(isDark: true),
-      extensions: const [CPoolThemeExtension(isDark: true)],
-    );
-  }
+  static ThemeData dark() => light();
 
   static ThemeData light() {
-    const primary = AppColors.violet600;
-    const secondary = AppColors.violet700;
+    const primary = AppColors.primary;
+    const secondary = AppColors.secondary;
 
     return ThemeData(
       useMaterial3: true,
@@ -101,18 +17,18 @@ abstract final class AppTheme {
       scaffoldBackgroundColor: AppColors.lightBg,
       colorScheme: const ColorScheme.light(
         primary: primary,
-        onPrimary: Colors.white,
+        onPrimary: AppColors.lightSurface,
         secondary: secondary,
-        onSecondary: Colors.white,
+        onSecondary: AppColors.lightText,
         surface: AppColors.lightSurface,
         onSurface: AppColors.lightText,
         error: AppColors.error,
-        onError: Colors.white,
+        onError: AppColors.lightSurface,
       ),
       appBarTheme: AppBarTheme(
         elevation: 0,
         centerTitle: true,
-        backgroundColor: AppColors.lightBg,
+        backgroundColor: AppColors.lightSurface,
         foregroundColor: AppColors.lightText,
         systemOverlayStyle: SystemUiOverlayStyle.dark,
         titleTextStyle: GoogleFonts.inter(
@@ -122,7 +38,7 @@ abstract final class AppTheme {
         ),
       ),
       cardTheme: CardThemeData(
-        color: AppColors.lightSurface,
+        color: AppColors.lightCard,
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
@@ -131,26 +47,26 @@ abstract final class AppTheme {
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: AppColors.lightSurface,
-        indicatorColor: AppColors.violet100,
+        indicatorColor: AppColors.primaryVeryLight,
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           final selected = states.contains(WidgetState.selected);
           return GoogleFonts.inter(
             fontSize: 11,
             fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-            color: selected ? AppColors.violet700 : AppColors.lightGreyMuted,
+            color: selected ? AppColors.primaryDark : AppColors.lightGreyMuted,
           );
         }),
         iconTheme: WidgetStateProperty.resolveWith((states) {
           final selected = states.contains(WidgetState.selected);
           return IconThemeData(
-            color: selected ? AppColors.violet600 : AppColors.lightGrey,
+            color: selected ? AppColors.primaryDark : AppColors.lightGreyMuted,
             size: 24,
           );
         }),
       ),
       floatingActionButtonTheme: const FloatingActionButtonThemeData(
-        backgroundColor: AppColors.violet600,
-        foregroundColor: Colors.white,
+        backgroundColor: AppColors.primary,
+        foregroundColor: AppColors.lightSurface,
         elevation: 2,
       ),
       dividerTheme: const DividerThemeData(color: AppColors.lightBorder),
@@ -167,7 +83,7 @@ abstract final class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.violet600, width: 1.5),
+          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
         ),
         hintStyle: GoogleFonts.inter(color: AppColors.lightGreyMuted),
         labelStyle: GoogleFonts.inter(color: AppColors.lightGreyMuted),
@@ -224,28 +140,20 @@ labelLarge: GoogleFonts.inter(
 }
 
 class CPoolThemeExtension extends ThemeExtension<CPoolThemeExtension> {
-  const CPoolThemeExtension({required this.isDark});
+  const CPoolThemeExtension({this.isDark = false});
 
   final bool isDark;
 
-  Color get background =>
-      isDark ? AppColors.darkBg : AppColors.lightBg;
-  Color get surface =>
-      isDark ? AppColors.darkSurface : AppColors.lightSurface;
-  Color get card => isDark ? AppColors.darkCard : AppColors.lightCard;
-  Color get elevated =>
-      isDark ? AppColors.darkElevated : AppColors.lightElevated;
-  Color get border =>
-      isDark ? AppColors.darkBorder : AppColors.lightBorder;
-  Color get textPrimary =>
-      isDark ? AppColors.darkText : AppColors.lightText;
-  Color get textSecondary =>
-      isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
-  Color get accent => isDark ? AppColors.violet400 : AppColors.violet600;
-  Color get accentMuted =>
-      isDark ? AppColors.violet600.withValues(alpha: 0.25) : AppColors.violet100;
-  Color get navBarBg =>
-      isDark ? AppColors.darkSurface : AppColors.lightSurface;
+  Color get background => AppColors.lightBg;
+  Color get surface => AppColors.lightSurface;
+  Color get card => AppColors.lightCard;
+  Color get elevated => AppColors.lightElevated;
+  Color get border => AppColors.lightBorder;
+  Color get textPrimary => AppColors.lightText;
+  Color get textSecondary => AppColors.lightTextSecondary;
+  Color get accent => AppColors.primary;
+  Color get accentMuted => AppColors.primaryLight;
+  Color get navBarBg => AppColors.lightSurface;
 
   @override
   CPoolThemeExtension copyWith({bool? isDark}) =>

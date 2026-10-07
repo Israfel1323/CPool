@@ -112,17 +112,17 @@ class _AppGateState extends State<AppGate> {
       return;
     }
 
-    if (!auth.isProfileLoaded) {
-      await auth.refreshProfile();
-    }
+    // Sync the current Supabase session so persisted users are classified
+    // as existing CPool users and new users are classified once.
+    await auth.syncProfile();
 
     if (!mounted || _isPasswordRecovery) return;
 
     setState(() {
       _loading = false;
-      _screen = auth.profileCompleted
-          ? const MainShell()
-          : const CompleteProfileScreen();
+      _screen = auth.isNewProfile == true
+          ? const CompleteProfileScreen()
+          : const MainShell();
     });
   }
 

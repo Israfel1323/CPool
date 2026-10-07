@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../config/app_config.dart';
 import '../../features/profile/models/driver_details.dart';
+import '../../features/profile/models/vehicle.dart';
 
 class ApiClient {
   ApiClient() {
@@ -18,14 +19,8 @@ class ApiClient {
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
-          print('========== API DEBUG ==========');
-          print('URL: ${options.path}');
-          print('hasSupabase: ${AppConfig.hasSupabase}');
-
           final session = supabase.Supabase.instance.client.auth.currentSession;
 
-          print('Session exists: ${session != null}');
-          print('FULL ACCESS TOKEN: ${session?.accessToken}');
           if (AppConfig.hasSupabase) {
             if (session != null) {
               options.headers['Authorization'] =
@@ -48,11 +43,6 @@ class ApiClient {
 
   Future<Map<String, dynamic>> getProfile() async {
     final res = await _dio.get<Map<String, dynamic>>('/users/me');
-
-    print("=========== PROFILE RESPONSE ===========");
-    print(res.data);
-    print("========================================");
-
     return res.data!;
   }
 
@@ -95,6 +85,7 @@ class ApiClient {
     double? fromLng,
     double? toLat,
     double? toLng,
+    DateTime? departureAt,
   }) async {
     final res = await _dio.get<Map<String, dynamic>>(
       '/commutes',
@@ -110,6 +101,9 @@ class ApiClient {
         if (toLat != null) 'to_lat': toLat,
 
         if (toLng != null) 'to_lng': toLng,
+
+        if (departureAt != null)
+          'departure_at': departureAt.toUtc().toIso8601String(),
       },
     );
 
@@ -142,10 +136,24 @@ class ApiClient {
   Future<Map<String, dynamic>> bookCommute(
     String commuteId, {
     int seats = 1,
+    List<Map<String, String>> guests = const [],
+    String travellingMode = 'me',
+    String? travellingPassengerName,
+    String? travellingPassengerGender,
   }) async {
     final res = await _dio.post<Map<String, dynamic>>(
       '/commutes/$commuteId/book',
-      data: {'seats': seats},
+      data: {
+        'seats': seats,
+        'guests': guests,
+        'travelling_mode': travellingMode,
+        if (travellingPassengerName != null &&
+            travellingPassengerName.trim().isNotEmpty)
+          'travelling_passenger_name': travellingPassengerName.trim(),
+        if (travellingPassengerGender != null &&
+            travellingPassengerGender.trim().isNotEmpty)
+          'travelling_passenger_gender': travellingPassengerGender.trim(),
+      },
     );
     return res.data!;
   }
@@ -157,6 +165,40 @@ class ApiClient {
         if (reason != null && reason.trim().isNotEmpty) 'reason': reason.trim(),
       },
     );
+  }
+
+  Future<Map<String, dynamic>> setPaymentMethod({
+    required String commuteId,
+    required String bookingId,
+    required String paymentMethod,
+  }) async {
+    final res = await _dio.patch<Map<String, dynamic>>(
+      '/commutes/$commuteId/bookings/$bookingId/payment-method',
+      data: {'payment_method': paymentMethod},
+    );
+    print('>>> SET PAYMENT METHOD: $paymentMethod');
+    print('>>> BOOKING: $bookingId');
+    print('>>> RESPONSE: ${res.data}');
+    return res.data!;
+  }
+
+  Future<Map<String, dynamic>> completeBookingPayment({
+    required String commuteId,
+    required String bookingId,
+  }) async {
+    final res = await _dio.patch<Map<String, dynamic>>(
+      '/commutes/$commuteId/bookings/$bookingId/payment-complete',
+    );
+
+    return res.data!;
+  }
+
+  Future<List<dynamic>> getRidePayments(String commuteId) async {
+    final res = await _dio.get<Map<String, dynamic>>(
+      '/commutes/$commuteId/payments',
+    );
+    print('>>> DRIVER PAYMENT POLL: ${res.data}');
+    return (res.data!['payments'] as List<dynamic>?) ?? [];
   }
 
   Future<Map<String, dynamic>> createPaymentOrder(String bookingId) async {
@@ -183,20 +225,45 @@ class ApiClient {
     return res.data!;
   }
 
-  Future<List<dynamic>> getChatMessages(String commuteId) async {
-    final res = await _dio.get<Map<String, dynamic>>('/chat/$commuteId');
+  Future<List<dynamic>> getChatMessages(
+    String commuteId,
+    String participantId,
+  ) async {
+    final res = await _dio.get<Map<String, dynamic>>(
+      '/chat/$commuteId/$participantId',
+    );
+
     return (res.data!['messages'] as List<dynamic>?) ?? [];
   }
 
   Future<Map<String, dynamic>> sendChatMessage(
     String commuteId,
+    String participantId,
     String body,
   ) async {
     final res = await _dio.post<Map<String, dynamic>>(
-      '/chat/$commuteId',
+      '/chat/$commuteId/$participantId',
       data: {'body': body},
     );
+
     return res.data!;
+  }
+
+  Future<int> markChatMessagesRead(
+    String commuteId,
+    String participantId,
+  ) async {
+    final res = await _dio.patch<Map<String, dynamic>>(
+      '/chat/$commuteId/$participantId/read',
+    );
+
+    return (res.data!['marked_read'] as num?)?.toInt() ?? 0;
+  }
+
+  Future<Map<String, dynamic>> getUnreadChatMessages() async {
+    final res = await _dio.get<Map<String, dynamic>>('/chat/unread');
+
+    return res.data ?? {'total_unread': 0, 'conversations': <dynamic>[]};
   }
 
   Future<List<dynamic>> getPassengers(String commuteId) async {
@@ -293,8 +360,6 @@ class ApiClient {
   }
 
   Future<String> uploadProfilePhoto(XFile image) async {
-    print("========== UPLOAD STARTED ==========");
-
     final client = supabase.Supabase.instance.client;
 
     final user = client.auth.currentUser;
@@ -303,15 +368,9 @@ class ApiClient {
       throw Exception('User not logged in');
     }
 
-    print("User ID: ${user.id}");
-
     final bytes = await image.readAsBytes();
 
-    print("Image Size: ${bytes.length}");
-
     final path = '${user.id}/${DateTime.now().millisecondsSinceEpoch}.jpg';
-
-    print("Uploading to: $path");
 
     await client.storage
         .from('avatars')
@@ -324,12 +383,7 @@ class ApiClient {
           ),
         );
 
-    print("Upload Complete");
-
     final publicUrl = client.storage.from('avatars').getPublicUrl(path);
-
-    print("Public URL:");
-    print(publicUrl);
 
     return publicUrl;
   }
@@ -384,6 +438,11 @@ class ApiClient {
     return DriverDetails.fromJson(res.data!['driverDetails']);
   }
 
+  Future<List<dynamic>> getInterests() async {
+    final res = await _dio.get<Map<String, dynamic>>('/users/interests');
+    return (res.data?['interests'] as List<dynamic>?) ?? [];
+  }
+
   Future<Map<String, dynamic>> updateProfile({
     required String fullName,
     required String phoneNumber,
@@ -391,7 +450,9 @@ class ApiClient {
     required String branch,
     required String rollNumber,
     required int admissionYear,
+    required String gender,
     String? avatarUrl,
+    List<int> interestIds = const [],
   }) async {
     final res = await _dio.patch<Map<String, dynamic>>(
       '/users/me',
@@ -402,18 +463,25 @@ class ApiClient {
         'branch': branch,
         'roll_number': rollNumber,
         'admission_year': admissionYear,
+        'gender': gender,
+        'interests': interestIds,
         if (avatarUrl != null) 'avatar_url': avatarUrl,
       },
     );
 
     return res.data!;
   }
-    Future<Map<String, dynamic>> getRatingEligible(
-    String commuteId,
-  ) async {
+
+  Future<Map<String, dynamic>> getRatingEligible(String commuteId) async {
     final res = await _dio.get<Map<String, dynamic>>(
       '/commutes/$commuteId/rating-eligible',
     );
+
+    return res.data!;
+  }
+
+  Future<Map<String, dynamic>> getMyRatings() async {
+    final res = await _dio.get<Map<String, dynamic>>('/commutes/ratings');
 
     return res.data!;
   }
@@ -435,5 +503,264 @@ class ApiClient {
     );
 
     return res.data!;
+  }
+  // ============================================================
+  // EMERGENCY CONTACTS
+  // ============================================================
+
+  Future<List<dynamic>> getEmergencyContacts() async {
+    final res = await _dio.get<Map<String, dynamic>>('/emergency-contacts');
+
+    return (res.data?['contacts'] as List<dynamic>?) ?? [];
+  }
+
+  Future<Map<String, dynamic>> addEmergencyContact({
+    required String name,
+    required String phoneNumber,
+    String? relationship,
+  }) async {
+    final res = await _dio.post<Map<String, dynamic>>(
+      '/emergency-contacts',
+      data: {
+        'name': name.trim(),
+        'phone_number': phoneNumber.trim(),
+        if (relationship != null && relationship.trim().isNotEmpty)
+          'relationship': relationship.trim(),
+      },
+    );
+
+    return res.data!;
+  }
+
+  Future<Map<String, dynamic>> updateEmergencyContact({
+    required String contactId,
+    required String name,
+    required String phoneNumber,
+    String? relationship,
+  }) async {
+    final res = await _dio.patch<Map<String, dynamic>>(
+      '/emergency-contacts/$contactId',
+      data: {
+        'name': name.trim(),
+        'phone_number': phoneNumber.trim(),
+        if (relationship != null && relationship.trim().isNotEmpty)
+          'relationship': relationship.trim(),
+      },
+    );
+
+    return res.data!;
+  }
+
+  Future<void> deleteEmergencyContact(String contactId) async {
+    await _dio.delete('/emergency-contacts/$contactId');
+  }
+  // ============================================================
+  // TRIP SAFETY
+  // ============================================================
+
+  Future<Map<String, dynamic>> getTripSafetySession(String commuteId) async {
+    final res = await _dio.get<Map<String, dynamic>>('/trip-safety/$commuteId');
+
+    return res.data?['session'] as Map<String, dynamic>? ?? {};
+  }
+
+  Future<String> getTripSafetyShareLink(String commuteId) async {
+    final session = await getTripSafetySession(commuteId);
+
+    final shareToken = session['share_token']?.toString();
+
+    if (shareToken == null || shareToken.isEmpty) {
+      throw Exception('Trip safety share link is unavailable.');
+    }
+
+    return '${AppConfig.apiBaseUrl}/trip-safety/share/$shareToken';
+  }
+
+  Future<Map<String, dynamic>> getSharedTripSafety(String shareToken) async {
+    final res = await _dio.get<Map<String, dynamic>>(
+      '/trip-safety/share/$shareToken',
+    );
+
+    return res.data?['session'] as Map<String, dynamic>? ?? {};
+  }
+
+  Future<Map<String, dynamic>> updateTripSafetyLocation({
+    required String commuteId,
+    required double latitude,
+    required double longitude,
+  }) async {
+    final res = await _dio.patch<Map<String, dynamic>>(
+      '/trip-safety/$commuteId/location',
+      data: {'latitude': latitude, 'longitude': longitude},
+    );
+
+    return res.data?['session'] as Map<String, dynamic>? ?? {};
+  }
+
+  Future<Map<String, dynamic>> endTripSafetySession(String commuteId) async {
+    final res = await _dio.post<Map<String, dynamic>>(
+      '/trip-safety/$commuteId/end',
+    );
+
+    return res.data?['session'] as Map<String, dynamic>? ?? {};
+  }
+
+  Future<Map<String, dynamic>> triggerSosAlert({
+    required String commuteId,
+    String? message,
+  }) async {
+    final res = await _dio.post<Map<String, dynamic>>(
+      '/trip-safety/$commuteId/sos',
+      data: {
+        if (message != null && message.trim().isNotEmpty)
+          'message': message.trim(),
+      },
+    );
+
+    return res.data?['alert'] as Map<String, dynamic>? ?? {};
+  }
+  // ============================================================
+  // CUSTOMER SUPPORT
+  // ============================================================
+
+  Future<Map<String, dynamic>> getSupportTickets() async {
+    final res = await _dio.get<Map<String, dynamic>>('/support/tickets');
+    return res.data!;
+  }
+
+  Future<Map<String, dynamic>> createSupportTicket({
+    required String category,
+    required String description,
+    String? commuteId,
+  }) async {
+    final res = await _dio.post<Map<String, dynamic>>(
+      '/support/tickets',
+      data: {
+        'category': category,
+        'description': description.trim(),
+        if (commuteId != null && commuteId.trim().isNotEmpty)
+          'commute_id': commuteId.trim(),
+      },
+    );
+
+    return res.data!;
+  }
+
+  Future<Map<String, dynamic>> getSupportTicket(String ticketId) async {
+    final res = await _dio.get<Map<String, dynamic>>(
+      '/support/tickets/$ticketId',
+    );
+    return res.data!;
+  }
+
+  Future<Map<String, dynamic>> replyToSupportTicket(
+    String ticketId, {
+    required String message,
+  }) async {
+    final res = await _dio.post<Map<String, dynamic>>(
+      '/support/tickets/$ticketId/reply',
+      data: {'message': message.trim()},
+    );
+
+    return res.data!;
+  }
+
+  Future<Map<String, dynamic>> getOperationsSupportTickets({
+    String status = 'open',
+    int page = 1,
+    int limit = 20,
+    String search = '',
+  }) async {
+    final res = await _dio.get(
+      '/operations/support/tickets',
+      queryParameters: {
+        'status': status,
+        'page': page,
+        'limit': limit,
+        if (search.trim().isNotEmpty) 'search': search.trim(),
+      },
+    );
+    return Map<String, dynamic>.from(res.data ?? {});
+  }
+
+  Future<Map<String, dynamic>> getOperationsSupportTicket(
+    String ticketId,
+  ) async {
+    final res = await _dio.get('/operations/support/tickets/$ticketId');
+    return Map<String, dynamic>.from(res.data ?? {});
+  }
+
+  Future<Map<String, dynamic>> replyToOperationsSupportTicket(
+    String ticketId, {
+    required String message,
+  }) async {
+    final res = await _dio.post(
+      '/operations/support/tickets/$ticketId/reply',
+      data: {'message': message},
+    );
+    return Map<String, dynamic>.from(res.data ?? {});
+  }
+
+  Future<Map<String, dynamic>> resolveOperationsSupportTicket(
+    String ticketId,
+  ) async {
+    final res = await _dio.put('/operations/support/tickets/$ticketId/resolve');
+    return Map<String, dynamic>.from(res.data ?? {});
+  }
+  // ============================================================
+  // VEHICLES
+  // ============================================================
+
+  Future<List<Vehicle>> getVehicles() async {
+    final res = await _dio.get<Map<String, dynamic>>('/vehicles');
+
+    final vehicles = res.data?['vehicles'] as List<dynamic>? ?? [];
+
+    return vehicles
+        .map((item) => Vehicle.fromJson(Map<String, dynamic>.from(item as Map)))
+        .toList();
+  }
+
+  Future<Vehicle> addVehicle({
+    required String vehicleType,
+    required String vehicleName,
+    required String vehicleNumber,
+    String? vehicleColor,
+  }) async {
+    final res = await _dio.post<Map<String, dynamic>>(
+      '/vehicles',
+      data: {
+        'vehicle_type': vehicleType,
+        'vehicle_name': vehicleName.trim(),
+        'vehicle_number': vehicleNumber.trim(),
+        'vehicle_color': vehicleColor?.trim(),
+      },
+    );
+
+    return Vehicle.fromJson(Map<String, dynamic>.from(res.data!['vehicle']));
+  }
+
+  Future<Vehicle> updateVehicle({
+    required String vehicleId,
+    String? vehicleType,
+    String? vehicleName,
+    String? vehicleNumber,
+    String? vehicleColor,
+  }) async {
+    final res = await _dio.patch<Map<String, dynamic>>(
+      '/vehicles/$vehicleId',
+      data: {
+        if (vehicleType != null) 'vehicle_type': vehicleType,
+        if (vehicleName != null) 'vehicle_name': vehicleName.trim(),
+        if (vehicleNumber != null) 'vehicle_number': vehicleNumber.trim(),
+        if (vehicleColor != null) 'vehicle_color': vehicleColor.trim(),
+      },
+    );
+
+    return Vehicle.fromJson(Map<String, dynamic>.from(res.data!['vehicle']));
+  }
+
+  Future<void> deleteVehicle(String vehicleId) async {
+    await _dio.delete('/vehicles/$vehicleId');
   }
 }

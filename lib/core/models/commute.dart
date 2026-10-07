@@ -14,6 +14,8 @@ class Commute {
     this.seatsTotal,
     this.status,
     this.driverName,
+    this.driverRating,
+    this.driverRatingCount = 0,
     this.womenOnly = false,
     this.alreadyBooked = false,
   });
@@ -36,6 +38,12 @@ class Commute {
   final String? status;
 
   final String? driverName;
+
+  // Driver reputation.
+  // Null rating means the driver has never received a rating.
+  final double? driverRating;
+  final int driverRatingCount;
+
   final bool womenOnly;
   final bool alreadyBooked;
 
@@ -44,7 +52,7 @@ class Commute {
       id: json['id'] as String,
       fromAddress: json['from_address'] as String? ?? '',
       toAddress: json['to_address'] as String? ?? '',
-      departureAt: DateTime.parse(json['departure_at'] as String),
+      departureAt: DateTime.parse(json['departure_at'] as String).toLocal(),
       poolType: json['pool_type'] as String? ?? 'carpool',
 
       seatsAvailable: json['seats_available'] as int? ?? 0,
@@ -59,9 +67,33 @@ class Commute {
       status: json['status'] as String?,
 
       driverName: json['driver_name'] as String?,
+
+      driverRating: _parseDouble(json['driver_rating']),
+      driverRatingCount: _parseInt(json['driver_rating_count']),
+
       womenOnly: json['women_only'] as bool? ?? false,
       alreadyBooked: json['already_booked'] as bool? ?? false,
     );
+  }
+
+  static double? _parseDouble(dynamic value) {
+    if (value == null) return null;
+
+    if (value is num) {
+      return value.toDouble();
+    }
+
+    return double.tryParse(value.toString());
+  }
+
+  static int _parseInt(dynamic value) {
+    if (value == null) return 0;
+
+    if (value is num) {
+      return value.toInt();
+    }
+
+    return int.tryParse(value.toString()) ?? 0;
   }
 
   String get costDisplay {

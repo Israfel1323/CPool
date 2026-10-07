@@ -8,6 +8,30 @@ class RideResultsScreen extends StatelessWidget {
 
   const RideResultsScreen({super.key, required this.commutes});
 
+  Widget _buildDriverRating(Commute ride) {
+    final rating = ride.driverRating;
+    final ratingCount = ride.driverRatingCount;
+
+    if (rating == null || ratingCount == 0) {
+      return const Text(
+        'New',
+        style: TextStyle(fontWeight: FontWeight.w600, color: Colors.grey),
+      );
+    }
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(Icons.star, size: 18, color: Colors.amber),
+        const SizedBox(width: 4),
+        Text(
+          '${rating.toStringAsFixed(1)} · $ratingCount ${ratingCount == 1 ? 'rating' : 'ratings'}',
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -43,9 +67,55 @@ class RideResultsScreen extends StatelessWidget {
 
                         const SizedBox(height: 12),
 
-                        Text("💺 Seats: ${ride.seatsAvailable}"),
+                        // Driver reputation.
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(Icons.person_outline, size: 20),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    ride.driverName?.trim().isNotEmpty == true
+                                        ? ride.driverName!
+                                        : 'Driver',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 3),
+                                  _buildDriverRating(ride),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
 
-                        Text("💰 ${ride.costDisplay}"),
+                        const SizedBox(height: 12),
+
+                        if (ride.departureAt != null) ...[
+                          Row(
+                            children: [
+                              const Icon(Icons.schedule_rounded, size: 19),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Departure: ${MaterialLocalizations.of(context).formatMediumDate(ride.departureAt!)} • '
+                                '${TimeOfDay.fromDateTime(ride.departureAt!).format(context)}',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 8),
+                        ],
+
+                        Text("Seats: ${ride.seatsAvailable}"),
+
+                        Text(ride.costDisplay),
 
                         const SizedBox(height: 12),
 
@@ -75,6 +145,9 @@ class RideResultsScreen extends StatelessWidget {
                                           'departure_at': ride.departureAt,
                                           'status': ride.status,
                                           'driver_name': ride.driverName,
+                                          'driver_rating': ride.driverRating,
+                                          'driver_rating_count':
+                                              ride.driverRatingCount,
                                         },
                                         isDriver: false,
                                       ),

@@ -36,7 +36,61 @@ class _MyRidesScreenState extends State<MyRidesScreen> {
     });
   }
 
-  Widget _ridesList(Future<List<dynamic>> future, {required bool isDriver}) {
+  List<Widget> _buildHistoryPeople(Map<String, dynamic> ride) {
+    final rawBookings = ride['history_bookings'];
+    if (rawBookings is! List || rawBookings.isEmpty) {
+      return const [];
+    }
+
+    final widgets = <Widget>[];
+    final myRole = ride['my_role']?.toString();
+
+    if (myRole == 'driver') {
+      widgets.add(
+        const Text(
+          'Passengers:',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
+      );
+    } else {
+      widgets.add(Text('Driver: ${ride['driver_name']}'));
+    }
+
+    for (final rawBooking in rawBookings) {
+      if (rawBooking is! Map) continue;
+
+      final booking = Map<String, dynamic>.from(rawBooking);
+      final passengerName =
+          booking['passenger_name']?.toString() ?? 'Passenger';
+      final guests = booking['guests'];
+
+      widgets.add(Text('Passenger: $passengerName'));
+
+      if (guests is List && guests.isNotEmpty) {
+        widgets.add(
+          const Text('Guests:', style: TextStyle(fontWeight: FontWeight.w600)),
+        );
+
+        for (final rawGuest in guests) {
+          if (rawGuest is! Map) continue;
+
+          final guest = Map<String, dynamic>.from(rawGuest);
+          final name = guest['name']?.toString() ?? 'Guest';
+          final gender = guest['gender']?.toString();
+          final suffix = gender == null || gender.isEmpty ? '' : ' • $gender';
+          widgets.add(Text('• $name$suffix'));
+        }
+      }
+    }
+
+    return widgets;
+  }
+
+  Widget _ridesList(
+    Future<List<dynamic>> future, {
+    required bool isDriver,
+    bool isHistory = false,
+  }) {
     return RefreshIndicator(
       onRefresh: _refresh,
       child: FutureBuilder<List<dynamic>>(
@@ -61,14 +115,21 @@ class _MyRidesScreenState extends State<MyRidesScreen> {
             itemBuilder: (context, index) {
               final ride = rides[index];
 
+              final historyRole = ride['my_role']?.toString();
+              final effectiveIsDriver = isHistory && historyRole != null
+                  ? historyRole == 'driver'
+                  : isDriver;
+
               return Card(
                 margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 child: ListTile(
                   onTap: () async {
                     await Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (context) =>
-                            RideDetailsScreen(ride: ride, isDriver: isDriver),
+                        builder: (context) => RideDetailsScreen(
+                          ride: ride,
+                          isDriver: effectiveIsDriver,
+                        ),
                       ),
                     );
 
@@ -91,10 +152,13 @@ class _MyRidesScreenState extends State<MyRidesScreen> {
                       ),
                       Text(
                         ride['pool_type'] == 'bikepool'
-                            ? '🏍 Bikepool'
-                            : '🚗 Carpool',
+                            ? 'Bikepool'
+                            : 'Carpool',
                       ),
-                      Text('Driver: ${ride['driver_name']}'),
+                      if (isHistory)
+                        ..._buildHistoryPeople(ride)
+                      else
+                        Text('Driver: ${ride['driver_name']}'),
                       Text(
                         'Seats: ${ride['seats_available']}/${ride['seats_total']}',
                       ),
@@ -133,7 +197,7 @@ class _MyRidesScreenState extends State<MyRidesScreen> {
                 children: [
                   _ridesList(_createdRidesFuture, isDriver: true),
                   _ridesList(_bookedRidesFuture, isDriver: false),
-                  _ridesList(_historyFuture, isDriver: true),
+                  _ridesList(_historyFuture, isDriver: true, isHistory: true),
                 ],
               ),
             ),
